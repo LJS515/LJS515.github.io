@@ -98,6 +98,13 @@ function getRandom(option) {
 
 function startSakura() {
     requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame || window.oRequestAnimationFrame;
+    if (stop) {
+        window.cancelAnimationFrame(stop);
+    }
+    var existingCanvas = document.getElementById('canvas_sakura');
+    if (existingCanvas) {
+        existingCanvas.parentNode.removeChild(existingCanvas);
+    }
     var canvas = document.createElement('canvas'),
         cxt;
     staticx = true;
@@ -125,16 +132,19 @@ function startSakura() {
         sakura.draw(cxt);
         sakuraList.push(sakura);
     }
-    stop = requestAnimationFrame(function () {
+    var render = function () {
         cxt.clearRect(0, 0, canvas.width, canvas.height);
         sakuraList.update();
         sakuraList.draw(cxt);
-        stop = requestAnimationFrame(arguments.callee);
-    })
+        stop = requestAnimationFrame(render);
+    };
+    stop = requestAnimationFrame(render);
 }
-window.onresize = function () {
-    var canvasSnow = document.getElementById('canvas_snow');
+
+function restartSakura() {
+    startSakura();
 }
+
 img.onload = function () {
     startSakura();
 }
@@ -142,11 +152,19 @@ img.onload = function () {
 function stopp() {
     if (staticx) {
         var child = document.getElementById("canvas_sakura");
-        child.parentNode.removeChild(child);
-        window.cancelAnimationFrame(stop);
+        if (child && child.parentNode) {
+            child.parentNode.removeChild(child);
+        }
+        if (stop) {
+            window.cancelAnimationFrame(stop);
+            stop = null;
+        }
         staticx = false;
     } else {
         startSakura();
     }
 }
+
+window.addEventListener('resize', restartSakura);
+document.addEventListener('pjax:complete', restartSakura);
 

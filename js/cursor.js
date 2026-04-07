@@ -21,11 +21,11 @@ class CrystalCursor {
         // 初始化各种状态和属性
         this.pos = { curr: null, prev: null }; // 存储当前和之前的光标位置
         this.trailParticles = []; // 存储拖尾粒子
-        this.clickParticles = []; // 存储点击粒子
         this.trailLength = 20; // 拖尾粒子的数量
         this.lastEmitTime = 0; // 上次发射粒子的时间
         this.angle = 0; // 光标移动角度
         this.currentPointer = 'normal'; // 当前指针类型
+        this.pointerHandlers = [];
         // 线性插值函数，用于平滑移动
         this.lerp = (a, b, n) => (1 - n) * a + n * b;
         
@@ -86,32 +86,33 @@ class CrystalCursor {
         document.addEventListener('mousedown', this.mouseDownHandler);
         document.addEventListener('mouseup', this.mouseUpHandler);
         
-        // 为可悬停元素添加事件监听
-        this.hoverElements = document.querySelectorAll('a, button, [data-hover]');
-        this.hoverElements.forEach(el => {
-            el.addEventListener('mouseenter', this.handleHoverEnter.bind(this));
-            el.addEventListener('mouseleave', this.handleHoverLeave.bind(this));
-        });
+        this.bindPointerSelectors('a, button, [data-hover]', 'link', true);
+        this.bindPointerSelectors('input, textarea, [contenteditable]', 'text');
+        this.bindPointerSelectors('[disabled]', 'unavailable');
+        this.bindPointerSelectors('[draggable="true"]', 'move');
+    }
 
-        // 为文本输入元素添加事件监听
-        this.textElements = document.querySelectorAll('input, textarea, [contenteditable]');
-        this.textElements.forEach(el => {
-            el.addEventListener('mouseenter', () => this.setPointer('text'));
-            el.addEventListener('mouseleave', () => this.setPointer('normal'));
-        });
+    bindPointerSelectors(selector, pointerType, withRipple = false) {
+        document.querySelectorAll(selector).forEach(el => {
+            const onEnter = event => {
+                this.setPointer(pointerType);
+                if (pointerType === 'link') {
+                    this.cursor.classList.add('hover');
+                }
+                if (withRipple) {
+                    this.createRippleEffect(event.currentTarget.getBoundingClientRect());
+                }
+            };
+            const onLeave = () => {
+                this.setPointer('normal');
+                if (pointerType === 'link') {
+                    this.cursor.classList.remove('hover');
+                }
+            };
 
-        // 为禁用元素添加事件监听
-        this.disabledElements = document.querySelectorAll('[disabled]');
-        this.disabledElements.forEach(el => {
-            el.addEventListener('mouseenter', () => this.setPointer('unavailable'));
-            el.addEventListener('mouseleave', () => this.setPointer('normal'));
-        });
-
-        // 为可拖动元素添加事件监听
-        this.draggableElements = document.querySelectorAll('[draggable="true"]');
-        this.draggableElements.forEach(el => {
-            el.addEventListener('mouseenter', () => this.setPointer('move'));
-            el.addEventListener('mouseleave', () => this.setPointer('normal'));
+            el.addEventListener('mouseenter', onEnter);
+            el.addEventListener('mouseleave', onLeave);
+            this.pointerHandlers.push({ el, onEnter, onLeave });
         });
     }
 
@@ -149,21 +150,6 @@ class CrystalCursor {
         // 创建点击效果
         this.createCrystalBurst(e.clientX + scrollX, e.clientY + scrollY);
         this.createShockwave(e.clientX + scrollX, e.clientY + scrollY);
-    }
-
-    // 处理悬停进入事件
-    handleHoverEnter(e) {
-        this.setPointer('link');
-        this.cursor.classList.add('hover');
-        const rect = e.target.getBoundingClientRect();
-        // 创建涟漪效果
-        this.createRippleEffect(rect);
-    }
-
-    // 处理悬停离开事件
-    handleHoverLeave() {
-        this.setPointer('normal');
-        this.cursor.classList.remove('hover');
     }
 
     // 设置指针样式
@@ -387,24 +373,9 @@ class CrystalCursor {
         document.removeEventListener('mousedown', this.mouseDownHandler);
         document.removeEventListener('mouseup', this.mouseUpHandler);
         
-        this.hoverElements.forEach(el => {
-            el.removeEventListener('mouseenter', this.handleHoverEnter);
-            el.removeEventListener('mouseleave', this.handleHoverLeave);
-        });
-        
-        this.textElements.forEach(el => {
-            el.removeEventListener('mouseenter', () => this.setPointer('text'));
-            el.removeEventListener('mouseleave', () => this.setPointer('normal'));
-        });
-        
-        this.disabledElements.forEach(el => {
-            el.removeEventListener('mouseenter', () => this.setPointer('unavailable'));
-            el.removeEventListener('mouseleave', () => this.setPointer('normal'));
-        });
-        
-        this.draggableElements.forEach(el => {
-            el.removeEventListener('mouseenter', () => this.setPointer('move'));
-            el.removeEventListener('mouseleave', () => this.setPointer('normal'));
+        this.pointerHandlers.forEach(({ el, onEnter, onLeave }) => {
+            el.removeEventListener('mouseenter', onEnter);
+            el.removeEventListener('mouseleave', onLeave);
         });
         
         // 移除所有DOM元素
@@ -416,9 +387,19 @@ class CrystalCursor {
 
 // 立即执行函数，创建并管理光标实例
 (() => {
-    const CRYSTAL_CURSOR = new CrystalCursor();
-    // 页面卸载前清理资源
+    const stateKey = '__crystalCursorInstance';
+    const mount = () => {
+        if (window[stateKey]) {
+            window[stateKey].destroy();
+        }
+        window[stateKey] = new CrystalCursor();
+    };
+
+    mount();
     window.addEventListener('beforeunload', () => {
-        CRYSTAL_CURSOR.destroy();
-    });
+        if (window[stateKey]) {
+            window[stateKey].destroy();
+        }
+    }, { once: true });
+    document.addEventListener('pjax:complete', mount);
 })();
