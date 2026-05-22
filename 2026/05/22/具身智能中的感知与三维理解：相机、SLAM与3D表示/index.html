@@ -1,0 +1,1127 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>具身智能中的感知与三维理解：相机、SLAM 与 3D 表示 | YiQiuのblog</title><meta name="author" content="YiQiu"><meta name="copyright" content="YiQiu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#f5f0fa"><meta name="description" content="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示 前面几篇文章已经把机器人系统里的基础链路铺开了：  数学基础 坐标系与姿态表示 运动学 概率、滤波与状态估计  这些内容主要回答的是： 机器人怎样描述自己，怎样估计自己，怎样把目标变成动作。 但一台真实机器人不能只知道“自己在哪里”。它还必须回答另一个同样关键的问题： 世界里有什么，它们在哪里，我能不能靠近、抓取、绕开或操作它们。 这就是">
+<meta property="og:type" content="article">
+<meta property="og:title" content="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示">
+<meta property="og:url" content="https://ljs515.github.io/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/index.html">
+<meta property="og:site_name" content="YiQiuのblog">
+<meta property="og:description" content="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示 前面几篇文章已经把机器人系统里的基础链路铺开了：  数学基础 坐标系与姿态表示 运动学 概率、滤波与状态估计  这些内容主要回答的是： 机器人怎样描述自己，怎样估计自己，怎样把目标变成动作。 但一台真实机器人不能只知道“自己在哪里”。它还必须回答另一个同样关键的问题： 世界里有什么，它们在哪里，我能不能靠近、抓取、绕开或操作它们。 这就是">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ljs515.github.io/img/04.png">
+<meta property="article:published_time" content="2026-05-22T04:10:00.000Z">
+<meta property="article:modified_time" content="2026-05-22T04:10:49.563Z">
+<meta property="article:author" content="YiQiu">
+<meta property="article:tag" content="具身智能">
+<meta property="article:tag" content="机器人">
+<meta property="article:tag" content="感知">
+<meta property="article:tag" content="SLAM">
+<meta property="article:tag" content="三维理解">
+<meta property="article:tag" content="开源项目">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ljs515.github.io/img/04.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "具身智能中的感知与三维理解：相机、SLAM 与 3D 表示",
+  "url": "https://ljs515.github.io/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/",
+  "image": "https://ljs515.github.io/img/04.png",
+  "datePublished": "2026-05-22T04:10:00.000Z",
+  "dateModified": "2026-05-22T04:10:49.563Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YiQiu",
+      "url": "https://LJS515.github.io/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/01.png"><link rel="canonical" href="https://ljs515.github.io/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.2"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#2d0a3d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f5f0fa')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chewy&amp;family=Ma+Shan+Zheng&amp;family=Fredoka+One&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":300,"languages":{"author":"作者: YiQiu","link":"链接: ","source":"来源: YiQiuのblog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '具身智能中的感知与三维理解：相机、SLAM 与 3D 表示',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Chewy&family=Fredoka+One&family=Caveat:wght@400;700&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet"><!-- hexo injector head_end start --><link rel="stylesheet" href="/css/categorybar.css"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiperstyle.css" media="print" onload="this.media='all'"><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-image: url(/img/03.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">16</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">35</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/04.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/img/01.png" alt="Logo"><span class="site-name">YiQiuのblog</span></a><a class="nav-page-title" href="/"><span class="site-name">具身智能中的感知与三维理解：相机、SLAM 与 3D 表示</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">具身智能中的感知与三维理解：相机、SLAM 与 3D 表示</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-05-22T04:10:00.000Z" title="发表于 2026-05-22 12:10:00">2026-05-22</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-05-22T04:10:49.563Z" title="更新于 2026-05-22 12:10:49">2026-05-22</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%95%99%E7%A8%8B/">具身智能教程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">6.3k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>20分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div class="ai-summary"><div class="ai-explanation" style="display: block;" data-summary="这篇文章系统梳理具身智能机器人中的感知与三维理解链路，重点讨论相机、RGB-D、LiDAR、IMU 等传感器如何通过标定、时间同步、SLAM/VIO/LIO、点云与三维表示、开放词汇检测、分割和 6D 位姿估计，最终变成导航目标、抓取目标或控制器输入。文章同时加入 ORB-SLAM3、VINS-Fusion、FAST-LIO2、Open3D、COLMAP、nerfstudio、Kalibr、SAM 2、Grounding DINO 等优质开源项目，给出每一阶段可以并行实践的项目路线和履历表达方式。">YiQiuAI正在绞尽脑汁想思路ING···</div><div class="ai-title"> <div class="ai-title-left"> <i class="fa-brands fa-slack"></i><div class="ai-title-text">YiQiuのAI摘要</div></div><div class="ai-tag" id="ai-tag">HunYuan-Lite</div></div></div><div id="post-outdate-notice" data="{&quot;limitDay&quot;:365,&quot;messagePrev&quot;:&quot;本文最后更新于&quot;,&quot;messageNext&quot;:&quot;天前，部分内容可能已失效&quot;,&quot;postUpdate&quot;:&quot;2026-05-22 12:10:49&quot;}" hidden></div><h1 id="具身智能中的感知与三维理解：相机、SLAM-与-3D-表示"><a href="#具身智能中的感知与三维理解：相机、SLAM-与-3D-表示" class="headerlink" title="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示"></a>具身智能中的感知与三维理解：相机、SLAM 与 3D 表示</h1><p><img src="/images/robotics-perception/perception-pipeline.png" alt="机器人感知与三维理解链路图"></p>
+<p>前面几篇文章已经把机器人系统里的基础链路铺开了：</p>
+<ul>
+<li>数学基础</li>
+<li>坐标系与姿态表示</li>
+<li>运动学</li>
+<li>概率、滤波与状态估计</li>
+</ul>
+<p>这些内容主要回答的是：</p>
+<p><strong>机器人怎样描述自己，怎样估计自己，怎样把目标变成动作。</strong></p>
+<p>但一台真实机器人不能只知道“自己在哪里”。它还必须回答另一个同样关键的问题：</p>
+<p><strong>世界里有什么，它们在哪里，我能不能靠近、抓取、绕开或操作它们。</strong></p>
+<p>这就是感知与三维理解进入具身智能系统的入口。</p>
+<p>它接在概率与滤波之后，和后面的机械臂控制、接触抓取、四足控制、人形控制都直接相连。读完这一篇，你应该能理解机器人感知链路如何从传感器数据出发，经过标定、定位、建图、语义理解，最后变成规划器和控制器能使用的任务目标。</p>
+<hr>
+<h2 id="一、机器人感知到底在解决什么问题"><a href="#一、机器人感知到底在解决什么问题" class="headerlink" title="一、机器人感知到底在解决什么问题"></a>一、机器人感知到底在解决什么问题</h2><p>很多人第一次接触机器人感知，会把它理解成：</p>
+<p><strong>用相机识别物体。</strong></p>
+<p>这当然是感知的一部分，但远远不够。</p>
+<p>对真正的机器人系统来说，感知至少要回答五类问题。</p>
+<h3 id="1-1-我在哪里"><a href="#1-1-我在哪里" class="headerlink" title="1.1 我在哪里"></a>1.1 我在哪里</h3><p>这对应定位问题。</p>
+<p>例如：</p>
+<ul>
+<li>移动机器人在房间里的位置</li>
+<li>四足机器人在地图里的位姿</li>
+<li>无人机在空间中的姿态和速度</li>
+<li>人形机器人骨盆相对世界坐标系的位置</li>
+</ul>
+<p>这一类问题通常和 SLAM、VIO、LIO、状态估计强相关。</p>
+<h3 id="1-2-周围环境长什么样"><a href="#1-2-周围环境长什么样" class="headerlink" title="1.2 周围环境长什么样"></a>1.2 周围环境长什么样</h3><p>这对应建图和三维表示问题。</p>
+<p>机器人需要知道：</p>
+<ul>
+<li>地面在哪里</li>
+<li>墙在哪里</li>
+<li>桌子在哪里</li>
+<li>障碍物在哪里</li>
+<li>哪些空间可以通过</li>
+<li>哪些区域可以放脚或放置物体</li>
+</ul>
+<p>这时只看 2D 图片不够，通常要进入点云、深度图、体素地图、TSDF、mesh 或神经三维表示。</p>
+<h3 id="1-3-目标物体在哪里"><a href="#1-3-目标物体在哪里" class="headerlink" title="1.3 目标物体在哪里"></a>1.3 目标物体在哪里</h3><p>这对应检测、分割和 6D 位姿估计。</p>
+<p>机器人不是只要知道“图像里有杯子”，而是要知道：</p>
+<ul>
+<li>杯子在相机坐标系下的位置</li>
+<li>杯子在机械臂底座坐标系下的位置</li>
+<li>杯子的大致姿态</li>
+<li>杯口朝向</li>
+<li>抓取点在哪里</li>
+</ul>
+<p>这就要求视觉模型的输出必须进入机器人坐标链。</p>
+<h3 id="1-4-哪些东西可以交互"><a href="#1-4-哪些东西可以交互" class="headerlink" title="1.4 哪些东西可以交互"></a>1.4 哪些东西可以交互</h3><p>具身智能关注的是行动，不只是识别。</p>
+<p>所以机器人还要判断：</p>
+<ul>
+<li>这个物体能不能抓</li>
+<li>这个抽屉能不能拉</li>
+<li>这个门把手能不能转</li>
+<li>这块地能不能踩</li>
+<li>这个区域能不能通过</li>
+</ul>
+<p>这部分会逐渐连接到 affordance、开放词汇感知、VLA 模型和机器人学习。</p>
+<h3 id="1-5-感知结果能不能被控制器使用"><a href="#1-5-感知结果能不能被控制器使用" class="headerlink" title="1.5 感知结果能不能被控制器使用"></a>1.5 感知结果能不能被控制器使用</h3><p>这是最容易被忽略的一点。</p>
+<p>视觉模型输出一个框，没有什么用。</p>
+<p>点云里分割出一团点，也还不够。</p>
+<p>机器人真正需要的是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">target_pose_in_robot_base</span><br></pre></td></tr></table></figure>
+
+<p>或者：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">grasp_pose</span><br><span class="line">navigation_goal</span><br><span class="line">footstep_region</span><br><span class="line">contact_surface</span><br></pre></td></tr></table></figure>
+
+<p>也就是说，感知的最终价值不在于“看懂图片”，而在于把世界状态转换成机器人能执行的任务输入。</p>
+<hr>
+<h2 id="二、感知链路的总结构"><a href="#二、感知链路的总结构" class="headerlink" title="二、感知链路的总结构"></a>二、感知链路的总结构</h2><p>一条机器人感知链路通常可以分成六段：</p>
+<ol>
+<li>传感器输入</li>
+<li>标定与时间同步</li>
+<li>定位与建图</li>
+<li>三维表示</li>
+<li>语义理解</li>
+<li>任务输出</li>
+</ol>
+<p>这六段不是孤立模块，而是一条闭环。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">sensor data</span><br><span class="line">  -&gt; calibration and time sync</span><br><span class="line">  -&gt; localization and mapping</span><br><span class="line">  -&gt; 3D representation</span><br><span class="line">  -&gt; semantic understanding</span><br><span class="line">  -&gt; task output</span><br><span class="line">  -&gt; planner / controller</span><br></pre></td></tr></table></figure>
+
+<p>如果只看单点算法，很容易误判问题。</p>
+<p>比如机械臂抓不准，可能不是抓取算法错了，而是：</p>
+<ul>
+<li>相机外参偏了</li>
+<li>深度图有洞</li>
+<li>目标分割不稳定</li>
+<li>坐标变换顺序错了</li>
+<li>机械臂底座坐标系和相机坐标系没对齐</li>
+<li>物体 6D 位姿估计跳变</li>
+</ul>
+<p>所以做机器人感知时，一定要建立系统视角。</p>
+<hr>
+<h2 id="三、传感器：相机、RGB-D、LiDAR-和-IMU"><a href="#三、传感器：相机、RGB-D、LiDAR-和-IMU" class="headerlink" title="三、传感器：相机、RGB-D、LiDAR 和 IMU"></a>三、传感器：相机、RGB-D、LiDAR 和 IMU</h2><p>机器人感知不是只有相机。</p>
+<p>不同传感器提供的信息不同，失效方式也不同。</p>
+<h3 id="3-1-普通相机"><a href="#3-1-普通相机" class="headerlink" title="3.1 普通相机"></a>3.1 普通相机</h3><p>普通 RGB 相机提供颜色和纹理。</p>
+<p>它适合：</p>
+<ul>
+<li>目标检测</li>
+<li>图像分割</li>
+<li>物体识别</li>
+<li>语义理解</li>
+<li>VLA 模型输入</li>
+</ul>
+<p>但单目相机有一个天然问题：</p>
+<p><strong>深度不直接可观测。</strong></p>
+<p>单张图片里看到一个杯子，你知道它在画面里的位置，但不能直接知道它离机器人到底多远。</p>
+<p>所以单目感知往往需要：</p>
+<ul>
+<li>多帧运动估计</li>
+<li>双目匹配</li>
+<li>深度网络</li>
+<li>结合 IMU 或先验尺寸</li>
+</ul>
+<h3 id="3-2-双目相机"><a href="#3-2-双目相机" class="headerlink" title="3.2 双目相机"></a>3.2 双目相机</h3><p>双目相机通过左右视差估计深度。</p>
+<p>优点是：</p>
+<ul>
+<li>成本相对低</li>
+<li>能直接估计深度</li>
+<li>适合 VIO 和稠密深度</li>
+</ul>
+<p>缺点是：</p>
+<ul>
+<li>弱纹理区域深度不稳</li>
+<li>远距离深度误差变大</li>
+<li>标定质量非常关键</li>
+<li>光照变化会影响匹配</li>
+</ul>
+<p>双目系统看起来简单，但真正工程落地时，标定、同步和曝光控制都很要命。</p>
+<h3 id="3-3-RGB-D-相机"><a href="#3-3-RGB-D-相机" class="headerlink" title="3.3 RGB-D 相机"></a>3.3 RGB-D 相机</h3><p>RGB-D 相机直接输出彩色图和深度图。</p>
+<p>它适合：</p>
+<ul>
+<li>桌面抓取</li>
+<li>室内建图</li>
+<li>点云处理</li>
+<li>物体分割后转三维点云</li>
+</ul>
+<p>常见问题包括：</p>
+<ul>
+<li>反光物体深度缺失</li>
+<li>黑色物体深度不稳</li>
+<li>透明物体经常测不准</li>
+<li>强光下红外深度可能失效</li>
+<li>深度图边缘会有噪声</li>
+</ul>
+<p>所以 RGB-D 适合入门，但不要误以为“有深度相机就解决了三维理解”。</p>
+<h3 id="3-4-LiDAR"><a href="#3-4-LiDAR" class="headerlink" title="3.4 LiDAR"></a>3.4 LiDAR</h3><p>LiDAR 提供稳定的几何距离信息。</p>
+<p>它适合：</p>
+<ul>
+<li>移动机器人导航</li>
+<li>室外建图</li>
+<li>四足巡检</li>
+<li>无人车和无人机定位</li>
+<li>LIO 系统</li>
+</ul>
+<p>LiDAR 的优势是几何稳定，缺点是语义弱。</p>
+<p>它告诉你“这里有一片点”，但不直接告诉你“这是一把椅子”。</p>
+<p>所以实际系统里经常会出现：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">LiDAR provides geometry</span><br><span class="line">camera provides semantics</span><br><span class="line">IMU provides motion prior</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-5-IMU"><a href="#3-5-IMU" class="headerlink" title="3.5 IMU"></a>3.5 IMU</h3><p>IMU 在感知系统里不是用来看物体，而是用来补运动状态。</p>
+<p>它提供：</p>
+<ul>
+<li>角速度</li>
+<li>线加速度</li>
+<li>姿态变化趋势</li>
+<li>高频运动先验</li>
+</ul>
+<p>在 VIO 和 LIO 里，IMU 常常承担一个关键角色：</p>
+<p><strong>在相机或 LiDAR 两帧之间，提供高频运动补偿。</strong></p>
+<p>但 IMU 会漂，所以必须和视觉、LiDAR、编码器或接触约束融合。</p>
+<hr>
+<h2 id="四、标定与同步：感知系统最容易被低估的部分"><a href="#四、标定与同步：感知系统最容易被低估的部分" class="headerlink" title="四、标定与同步：感知系统最容易被低估的部分"></a>四、标定与同步：感知系统最容易被低估的部分</h2><p>很多感知问题，不是算法不够高级，而是标定和同步没做好。</p>
+<h3 id="4-1-内参标定"><a href="#4-1-内参标定" class="headerlink" title="4.1 内参标定"></a>4.1 内参标定</h3><p>相机内参描述相机自己的成像模型。</p>
+<p>常见参数包括：</p>
+<ul>
+<li>焦距</li>
+<li>主点</li>
+<li>畸变系数</li>
+</ul>
+<p>如果内参不准，图像点反投影到三维空间时就会偏。</p>
+<p>这会导致：</p>
+<ul>
+<li>深度恢复不准</li>
+<li>双目匹配误差</li>
+<li>视觉里程计漂移</li>
+<li>6D 位姿估计偏差</li>
+</ul>
+<h3 id="4-2-外参标定"><a href="#4-2-外参标定" class="headerlink" title="4.2 外参标定"></a>4.2 外参标定</h3><p>外参描述两个坐标系之间的关系。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">T_base_camera</span><br><span class="line">T_camera_imu</span><br><span class="line">T_lidar_imu</span><br><span class="line">T_gripper_camera</span><br></pre></td></tr></table></figure>
+
+<p>机器人里最常见的外参问题是：</p>
+<p><strong>视觉看见了目标，但机械臂伸过去抓偏。</strong></p>
+<p>这往往不是模型没识别出来，而是相机坐标系到机械臂底座坐标系的变换不准。</p>
+<h3 id="4-3-手眼标定"><a href="#4-3-手眼标定" class="headerlink" title="4.3 手眼标定"></a>4.3 手眼标定</h3><p>机械臂场景里，手眼标定尤其重要。</p>
+<p>常见两种结构：</p>
+<ul>
+<li>eye-in-hand：相机装在机械臂末端</li>
+<li>eye-to-hand：相机固定在外部</li>
+</ul>
+<p>两者的问题不同。</p>
+<p>eye-in-hand 适合近距离观察，但相机一直跟着手动，图像会变化。</p>
+<p>eye-to-hand 视野稳定，但外参必须非常准，否则抓取点会整体偏移。</p>
+<h3 id="4-4-时间同步"><a href="#4-4-时间同步" class="headerlink" title="4.4 时间同步"></a>4.4 时间同步</h3><p>时间同步比很多人想象得更重要。</p>
+<p>如果相机、IMU、LiDAR 的时间戳对不上，系统会把不同时刻的状态硬拼在一起。</p>
+<p>结果可能是：</p>
+<ul>
+<li>VIO 轨迹抖动</li>
+<li>LiDAR 点云扭曲</li>
+<li>快速运动时定位发散</li>
+<li>控制器接收到过期目标</li>
+</ul>
+<p>所以做感知系统时，不要只问“传感器精度是多少”，还要问：</p>
+<p><strong>数据到底是不是同一时刻的。</strong></p>
+<h3 id="4-5-推荐开源项目"><a href="#4-5-推荐开源项目" class="headerlink" title="4.5 推荐开源项目"></a>4.5 推荐开源项目</h3><p>这一层最值得练的项目包括：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/opencv/opencv">OpenCV</a>：相机标定、图像处理基础库。</li>
+<li><a target="_blank" rel="noopener" href="https://github.com/ethz-asl/kalibr">Kalibr</a>：相机、IMU 标定工具。</li>
+<li><a target="_blank" rel="noopener" href="https://github.com/AprilRobotics/apriltag">AprilTag</a>：标定板、定位和机器人视觉常用工具。</li>
+</ul>
+<p>最小实践可以这样做：</p>
+<ol>
+<li>用 OpenCV 标定一台相机。</li>
+<li>用 AprilTag 做一个固定标定板。</li>
+<li>如果有 IMU，用 Kalibr 做相机-IMU 标定。</li>
+<li>把标定结果写入 ROS 2 参数或配置文件。</li>
+<li>可视化外参变换，确认坐标轴方向没有反。</li>
+</ol>
+<p>履历表达可以写成：</p>
+<ul>
+<li>完成相机内参、相机-IMU 外参与手眼标定流程，并将标定结果接入 ROS 2 TF 链。</li>
+<li>使用 AprilTag &#x2F; Kalibr 评估标定误差，定位机械臂抓取偏移中的外参问题。</li>
+</ul>
+<hr>
+<h2 id="五、SLAM、VIO-和-LIO：机器人怎样知道自己在哪"><a href="#五、SLAM、VIO-和-LIO：机器人怎样知道自己在哪" class="headerlink" title="五、SLAM、VIO 和 LIO：机器人怎样知道自己在哪"></a>五、SLAM、VIO 和 LIO：机器人怎样知道自己在哪</h2><p>SLAM 的全称是 Simultaneous Localization and Mapping。</p>
+<p>它同时做两件事：</p>
+<ol>
+<li>定位自己</li>
+<li>建立环境地图</li>
+</ol>
+<p>但在机器人系统里，SLAM 不是一个单一算法，而是一类系统。</p>
+<h3 id="5-1-视觉-SLAM"><a href="#5-1-视觉-SLAM" class="headerlink" title="5.1 视觉 SLAM"></a>5.1 视觉 SLAM</h3><p>视觉 SLAM 主要用相机图像估计运动和地图。</p>
+<p>典型路线包括：</p>
+<ul>
+<li>特征点法</li>
+<li>直接法</li>
+<li>半直接法</li>
+<li>语义辅助 SLAM</li>
+</ul>
+<p>代表项目是 <a target="_blank" rel="noopener" href="https://github.com/UZ-SLAMLab/ORB_SLAM3">ORB-SLAM3</a>。</p>
+<p>ORB-SLAM3 的价值不只是“能跑”，而是它把单目、双目、RGB-D、视觉惯性等模式组织成一个完整系统，非常适合用来理解视觉 SLAM 的工程结构。</p>
+<h3 id="5-2-VIO"><a href="#5-2-VIO" class="headerlink" title="5.2 VIO"></a>5.2 VIO</h3><p>VIO 是 Visual-Inertial Odometry。</p>
+<p>它融合相机和 IMU。</p>
+<p>相机提供环境约束，IMU 提供高频运动先验。</p>
+<p>典型项目是 <a target="_blank" rel="noopener" href="https://github.com/HKUST-Aerial-Robotics/VINS-Fusion">VINS-Fusion</a>。</p>
+<p>VIO 常用于：</p>
+<ul>
+<li>无人机</li>
+<li>AR &#x2F; VR</li>
+<li>手持设备</li>
+<li>小型移动机器人</li>
+</ul>
+<p>VIO 的难点是：</p>
+<ul>
+<li>相机-IMU 外参</li>
+<li>时间偏移</li>
+<li>IMU bias</li>
+<li>快速运动模糊</li>
+<li>特征点退化</li>
+</ul>
+<p>如果 VIO 跑飞，不要先怪算法。先看标定、时间戳、曝光、运动模糊和特征质量。</p>
+<h3 id="5-3-LIO"><a href="#5-3-LIO" class="headerlink" title="5.3 LIO"></a>5.3 LIO</h3><p>LIO 是 LiDAR-Inertial Odometry。</p>
+<p>它融合 LiDAR 和 IMU。</p>
+<p>典型项目包括：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/hku-mars/FAST_LIO">FAST-LIO2</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/TixiaoShan/LIO-SAM">LIO-SAM</a></li>
+</ul>
+<p>LIO 在室外、巡检、四足机器人和无人车里很常见。</p>
+<p>它的优势是几何稳定，尤其在纹理少的环境里比纯视觉更可靠。</p>
+<p>但它也有问题：</p>
+<ul>
+<li>动态物体会污染点云</li>
+<li>雨雾粉尘会影响激光</li>
+<li>点云配准依赖环境几何结构</li>
+<li>地面、走廊等重复结构会带来退化</li>
+</ul>
+<h3 id="5-4-SLAM-输出怎样接到机器人系统"><a href="#5-4-SLAM-输出怎样接到机器人系统" class="headerlink" title="5.4 SLAM 输出怎样接到机器人系统"></a>5.4 SLAM 输出怎样接到机器人系统</h3><p>SLAM 输出通常不是最终任务目标，而是系统状态的一部分。</p>
+<p>它常常会进入：</p>
+<ul>
+<li>TF 坐标链</li>
+<li>状态估计节点</li>
+<li>导航地图</li>
+<li>局部规划器</li>
+<li>数据记录与回放系统</li>
+</ul>
+<p>一个常见结构是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SLAM pose</span><br><span class="line">  -&gt; state estimator</span><br><span class="line">  -&gt; robot base pose</span><br><span class="line">  -&gt; planner</span><br><span class="line">  -&gt; controller</span><br></pre></td></tr></table></figure>
+
+<p>如果 SLAM 坐标系、机器人 base 坐标系和地图坐标系没有管理好，后面所有规划和控制都会出问题。</p>
+<h3 id="5-5-最小实践项目"><a href="#5-5-最小实践项目" class="headerlink" title="5.5 最小实践项目"></a>5.5 最小实践项目</h3><p>建议这样做：</p>
+<ol>
+<li>下载一个公开数据集或 rosbag。</li>
+<li>跑 ORB-SLAM3 或 VINS-Fusion。</li>
+<li>用 evo 评估轨迹误差。</li>
+<li>改变相机频率、IMU 噪声或外参，观察轨迹变化。</li>
+<li>把 SLAM 输出接到 ROS 2 TF 树里。</li>
+</ol>
+<p>履历表达可以写成：</p>
+<ul>
+<li>复现 ORB-SLAM3 &#x2F; VINS-Fusion，在公开数据集上完成轨迹评估，并用 evo 分析 ATE&#x2F;RPE。</li>
+<li>将 SLAM 输出接入 ROS 2 TF 链，为导航与机械臂任务提供世界坐标系下的位姿输入。</li>
+</ul>
+<hr>
+<h2 id="六、三维表示：点云、深度图、体素和神经表示"><a href="#六、三维表示：点云、深度图、体素和神经表示" class="headerlink" title="六、三维表示：点云、深度图、体素和神经表示"></a>六、三维表示：点云、深度图、体素和神经表示</h2><p>机器人要和世界交互，最终必须进入三维。</p>
+<p>二维图像告诉你“画面里有什么”，三维表示告诉你：</p>
+<p><strong>这个东西在空间里的哪里。</strong></p>
+<h3 id="6-1-深度图"><a href="#6-1-深度图" class="headerlink" title="6.1 深度图"></a>6.1 深度图</h3><p>深度图是最直接的三维入口。</p>
+<p>每个像素对应一个深度值。</p>
+<p>它的优点是和图像天然对齐，适合从分割 mask 转成三维点。</p>
+<p>常见流程是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">RGB image</span><br><span class="line">  -&gt; segmentation mask</span><br><span class="line">  -&gt; depth image</span><br><span class="line">  -&gt; point cloud</span><br><span class="line">  -&gt; object 3D position</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-点云"><a href="#6-2-点云" class="headerlink" title="6.2 点云"></a>6.2 点云</h3><p>点云是机器人三维理解里最常见的数据结构。</p>
+<p>它由大量三维点组成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">point = [x, y, z]</span><br></pre></td></tr></table></figure>
+
+<p>有时还会带：</p>
+<ul>
+<li>颜色</li>
+<li>法向量</li>
+<li>强度</li>
+<li>语义标签</li>
+</ul>
+<p>点云适合：</p>
+<ul>
+<li>平面分割</li>
+<li>物体聚类</li>
+<li>障碍物检测</li>
+<li>抓取点估计</li>
+<li>地形建模</li>
+</ul>
+<p>推荐项目是 <a target="_blank" rel="noopener" href="https://github.com/isl-org/Open3D">Open3D</a>。</p>
+<p>Open3D 的优点是接口清晰，适合快速做点云处理、可视化、配准和重建。</p>
+<h3 id="6-3-TSDF-和体素地图"><a href="#6-3-TSDF-和体素地图" class="headerlink" title="6.3 TSDF 和体素地图"></a>6.3 TSDF 和体素地图</h3><p>TSDF 常用于将多帧深度融合成稳定三维模型。</p>
+<p>它的核心思路是：把空间划成体素，再记录每个体素到表面的距离关系。</p>
+<p>它适合：</p>
+<ul>
+<li>室内重建</li>
+<li>桌面场景融合</li>
+<li>机器人工作空间建模</li>
+<li>碰撞检测前的几何建图</li>
+</ul>
+<h3 id="6-4-Mesh"><a href="#6-4-Mesh" class="headerlink" title="6.4 Mesh"></a>6.4 Mesh</h3><p>Mesh 比点云更接近物体表面。</p>
+<p>它包含：</p>
+<ul>
+<li>顶点</li>
+<li>边</li>
+<li>面</li>
+</ul>
+<p>Mesh 适合可视化、仿真和碰撞模型，但生成稳定 mesh 通常比处理点云更难。</p>
+<h3 id="6-5-NeRF、3D-Gaussian-Splatting-与机器人"><a href="#6-5-NeRF、3D-Gaussian-Splatting-与机器人" class="headerlink" title="6.5 NeRF、3D Gaussian Splatting 与机器人"></a>6.5 NeRF、3D Gaussian Splatting 与机器人</h3><p>近几年三维重建里最火的方向包括：</p>
+<ul>
+<li>NeRF</li>
+<li>3D Gaussian Splatting</li>
+<li>神经场表示</li>
+</ul>
+<p>相关开源项目包括：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/nerfstudio-project/nerfstudio">nerfstudio</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/nerfstudio-project/gsplat">gsplat</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/colmap/colmap">COLMAP</a></li>
+</ul>
+<p>这些技术在视觉效果上很强，但用于机器人时要特别注意：</p>
+<ul>
+<li>能不能实时更新</li>
+<li>能不能输出可碰撞几何</li>
+<li>能不能提供尺度一致的坐标</li>
+<li>能不能接入规划器</li>
+<li>动态物体如何处理</li>
+</ul>
+<p>也就是说，机器人不只是要“看起来真实”的三维重建，而是要“能被规划和控制使用”的三维表示。</p>
+<hr>
+<h2 id="七、语义理解：检测、分割、开放词汇和-6D-位姿"><a href="#七、语义理解：检测、分割、开放词汇和-6D-位姿" class="headerlink" title="七、语义理解：检测、分割、开放词汇和 6D 位姿"></a>七、语义理解：检测、分割、开放词汇和 6D 位姿</h2><p>三维几何告诉机器人“哪里有东西”。</p>
+<p>语义理解告诉机器人：</p>
+<p><strong>那是什么东西。</strong></p>
+<h3 id="7-1-目标检测"><a href="#7-1-目标检测" class="headerlink" title="7.1 目标检测"></a>7.1 目标检测</h3><p>目标检测输出 bounding box。</p>
+<p>它适合快速知道图像里有哪些目标。</p>
+<p>但对机器人来说，box 只是第一步。</p>
+<p>因为抓取和导航通常还需要：</p>
+<ul>
+<li>三维位置</li>
+<li>物体轮廓</li>
+<li>姿态</li>
+<li>可抓区域</li>
+<li>可通行空间</li>
+</ul>
+<h3 id="7-2-图像分割"><a href="#7-2-图像分割" class="headerlink" title="7.2 图像分割"></a>7.2 图像分割</h3><p>分割比检测更适合机器人。</p>
+<p>因为分割能告诉你目标的像素区域。</p>
+<p>有了 mask，就可以结合深度图得到目标点云：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">image mask + depth image -&gt; object point cloud</span><br></pre></td></tr></table></figure>
+
+<p>这对桌面抓取、物体操作非常有用。</p>
+<h3 id="7-3-开放词汇感知"><a href="#7-3-开放词汇感知" class="headerlink" title="7.3 开放词汇感知"></a>7.3 开放词汇感知</h3><p>传统检测模型通常只能识别训练集中定义好的类别。</p>
+<p>开放词汇感知更进一步：</p>
+<p><strong>用户可以用自然语言指定目标。</strong></p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">find the red mug</span><br><span class="line">find the tool on the left</span><br><span class="line">find the object that can be used to clean the table</span><br></pre></td></tr></table></figure>
+
+<p>相关项目包括：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/facebookresearch/sam2">SAM 2</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/IDEA-Research/GroundingDINO">Grounding DINO</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/openai/CLIP">CLIP</a></li>
+</ul>
+<p>这类能力对具身智能很重要，因为机器人任务往往不是固定类别，而是开放环境里的语言指令。</p>
+<h3 id="7-4-6D-位姿估计"><a href="#7-4-6D-位姿估计" class="headerlink" title="7.4 6D 位姿估计"></a>7.4 6D 位姿估计</h3><p>6D 位姿估计回答的是：</p>
+<p><strong>物体在三维空间中的位置和姿态是什么。</strong></p>
+<p>它通常包含：</p>
+<ul>
+<li>3D position</li>
+<li>3D orientation</li>
+</ul>
+<p>对机械臂抓取、插接、装配任务来说，6D 位姿比 2D 检测框重要得多。</p>
+<p>例如：</p>
+<ul>
+<li>杯子把手朝哪边</li>
+<li>螺丝孔法向量朝哪里</li>
+<li>工具柄的方向是什么</li>
+<li>物体是否倾斜</li>
+</ul>
+<p>这些都会直接影响抓取和操作策略。</p>
+<h3 id="7-5-从语义到动作"><a href="#7-5-从语义到动作" class="headerlink" title="7.5 从语义到动作"></a>7.5 从语义到动作</h3><p>机器人感知最关键的一步是把语义输出变成动作目标。</p>
+<p>常见链路是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">language query</span><br><span class="line">  -&gt; open-vocabulary detection</span><br><span class="line">  -&gt; segmentation mask</span><br><span class="line">  -&gt; depth projection</span><br><span class="line">  -&gt; object point cloud</span><br><span class="line">  -&gt; 6D pose / grasp pose</span><br><span class="line">  -&gt; planner</span><br></pre></td></tr></table></figure>
+
+<p>如果这条链路能跑通，你的项目就不只是“调用视觉模型”，而是一个真正的具身感知闭环。</p>
+<hr>
+<h2 id="八、开源项目矩阵：每一类项目解决什么问题"><a href="#八、开源项目矩阵：每一类项目解决什么问题" class="headerlink" title="八、开源项目矩阵：每一类项目解决什么问题"></a>八、开源项目矩阵：每一类项目解决什么问题</h2><p><img src="/images/robotics-perception/project-matrix.png" alt="感知与三维理解开源项目矩阵"></p>
+<p>感知方向的开源项目很多，不建议一上来全都碰。</p>
+<p>更好的方式是按目标分组。</p>
+<h3 id="8-1-SLAM-VIO-LIO"><a href="#8-1-SLAM-VIO-LIO" class="headerlink" title="8.1 SLAM &#x2F; VIO &#x2F; LIO"></a>8.1 SLAM &#x2F; VIO &#x2F; LIO</h3><p>重点项目：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/UZ-SLAMLab/ORB_SLAM3">ORB-SLAM3</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/HKUST-Aerial-Robotics/VINS-Fusion">VINS-Fusion</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/hku-mars/FAST_LIO">FAST-LIO2</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/TixiaoShan/LIO-SAM">LIO-SAM</a></li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>轨迹估计</li>
+<li>定位建图</li>
+<li>传感器融合</li>
+<li>数据集复现</li>
+<li>轨迹误差评估</li>
+</ul>
+<p>履历关键词：</p>
+<ul>
+<li>SLAM pipeline</li>
+<li>VIO &#x2F; LIO</li>
+<li>trajectory evaluation</li>
+<li>sensor calibration</li>
+<li>ROS bag replay</li>
+</ul>
+<h3 id="8-2-三维重建与点云"><a href="#8-2-三维重建与点云" class="headerlink" title="8.2 三维重建与点云"></a>8.2 三维重建与点云</h3><p>重点项目：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/isl-org/Open3D">Open3D</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/colmap/colmap">COLMAP</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/nerfstudio-project/nerfstudio">nerfstudio</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/nerfstudio-project/gsplat">gsplat</a></li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>点云滤波</li>
+<li>点云配准</li>
+<li>RGB-D 重建</li>
+<li>物体点云分割</li>
+<li>场景三维可视化</li>
+</ul>
+<p>履历关键词：</p>
+<ul>
+<li>point cloud processing</li>
+<li>RGB-D reconstruction</li>
+<li>registration</li>
+<li>TSDF &#x2F; mesh</li>
+<li>3D scene representation</li>
+</ul>
+<h3 id="8-3-标定与工具链"><a href="#8-3-标定与工具链" class="headerlink" title="8.3 标定与工具链"></a>8.3 标定与工具链</h3><p>重点项目：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/opencv/opencv">OpenCV</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/ethz-asl/kalibr">Kalibr</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/AprilRobotics/apriltag">AprilTag</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/MichaelGrupp/evo">evo</a></li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>相机标定</li>
+<li>相机-IMU 标定</li>
+<li>手眼标定</li>
+<li>轨迹评估</li>
+<li>可视化调试</li>
+</ul>
+<p>履历关键词：</p>
+<ul>
+<li>calibration</li>
+<li>hand-eye calibration</li>
+<li>time synchronization</li>
+<li>TF tree</li>
+<li>ATE &#x2F; RPE evaluation</li>
+</ul>
+<h3 id="8-4-开放词汇感知"><a href="#8-4-开放词汇感知" class="headerlink" title="8.4 开放词汇感知"></a>8.4 开放词汇感知</h3><p>重点项目：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/facebookresearch/sam2">SAM 2</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/IDEA-Research/GroundingDINO">Grounding DINO</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/openai/CLIP">CLIP</a></li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>文本指定目标检测</li>
+<li>图像分割</li>
+<li>目标区域提取</li>
+<li>语言到视觉 grounding</li>
+<li>视觉输出到三维点云</li>
+</ul>
+<p>履历关键词：</p>
+<ul>
+<li>open-vocabulary perception</li>
+<li>visual grounding</li>
+<li>segmentation</li>
+<li>language-conditioned detection</li>
+<li>embodied perception</li>
+</ul>
+<hr>
+<h2 id="九、最推荐做的三个项目"><a href="#九、最推荐做的三个项目" class="headerlink" title="九、最推荐做的三个项目"></a>九、最推荐做的三个项目</h2><p>如果时间有限，不要从十几个开源项目里乱试。</p>
+<p>可以先做下面三个。</p>
+<h3 id="9-1-项目一：RGB-D-物体点云提取"><a href="#9-1-项目一：RGB-D-物体点云提取" class="headerlink" title="9.1 项目一：RGB-D 物体点云提取"></a>9.1 项目一：RGB-D 物体点云提取</h3><p>目标：</p>
+<p><strong>从一张 RGB-D 图里，提取目标物体的三维点云。</strong></p>
+<p>技术链路：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">RGB image</span><br><span class="line">  -&gt; SAM 2 / Grounding DINO</span><br><span class="line">  -&gt; mask</span><br><span class="line">  -&gt; depth projection</span><br><span class="line">  -&gt; Open3D point cloud</span><br><span class="line">  -&gt; object center / bounding box</span><br></pre></td></tr></table></figure>
+
+<p>最小实现：</p>
+<ol>
+<li>读取 RGB 图和深度图。</li>
+<li>用 SAM 2 或 Grounding DINO 得到目标 mask。</li>
+<li>根据相机内参把 mask 区域反投影成点云。</li>
+<li>用 Open3D 去除离群点。</li>
+<li>计算物体中心点和包围盒。</li>
+</ol>
+<p>履历表达：</p>
+<ul>
+<li>构建 RGB-D 目标点云提取 pipeline，结合开放词汇分割和 Open3D 点云处理，输出机器人可用的目标三维位置。</li>
+</ul>
+<h3 id="9-2-项目二：SLAM-轨迹评估与误差分析"><a href="#9-2-项目二：SLAM-轨迹评估与误差分析" class="headerlink" title="9.2 项目二：SLAM 轨迹评估与误差分析"></a>9.2 项目二：SLAM 轨迹评估与误差分析</h3><p>目标：</p>
+<p><strong>跑通一个 SLAM 系统，并能解释轨迹为什么漂。</strong></p>
+<p>技术链路：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">dataset / rosbag</span><br><span class="line">  -&gt; ORB-SLAM3 / VINS-Fusion</span><br><span class="line">  -&gt; trajectory</span><br><span class="line">  -&gt; evo evaluation</span><br><span class="line">  -&gt; error report</span><br></pre></td></tr></table></figure>
+
+<p>最小实现：</p>
+<ol>
+<li>下载公开数据集。</li>
+<li>跑 ORB-SLAM3 或 VINS-Fusion。</li>
+<li>导出轨迹。</li>
+<li>用 evo 计算 ATE&#x2F;RPE。</li>
+<li>改动相机参数或 IMU 噪声，比较误差变化。</li>
+</ol>
+<p>履历表达：</p>
+<ul>
+<li>复现视觉 SLAM &#x2F; VIO 系统，完成轨迹误差评估和参数敏感性分析，定位特征退化、时间同步和外参误差对结果的影响。</li>
+</ul>
+<h3 id="9-3-项目三：视觉到机械臂抓取目标"><a href="#9-3-项目三：视觉到机械臂抓取目标" class="headerlink" title="9.3 项目三：视觉到机械臂抓取目标"></a>9.3 项目三：视觉到机械臂抓取目标</h3><p>目标：</p>
+<p><strong>把感知结果转成机械臂底座坐标系下的抓取候选。</strong></p>
+<p>技术链路：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">camera detection</span><br><span class="line">  -&gt; object point cloud</span><br><span class="line">  -&gt; camera frame pose</span><br><span class="line">  -&gt; T_base_camera</span><br><span class="line">  -&gt; base frame target</span><br><span class="line">  -&gt; MoveIt 2 planning</span><br></pre></td></tr></table></figure>
+
+<p>最小实现：</p>
+<ol>
+<li>在桌面放一个目标物体。</li>
+<li>用 RGB-D 相机得到目标点云。</li>
+<li>标定相机和机械臂底座外参。</li>
+<li>输出 <code>target_pose_in_base</code>。</li>
+<li>用 MoveIt 2 规划机械臂末端到目标附近。</li>
+</ol>
+<p>履历表达：</p>
+<ul>
+<li>搭建视觉到机械臂抓取目标的最小闭环，实现目标分割、点云提取、外参变换和 MoveIt 2 规划输入。</li>
+</ul>
+<p>这个项目非常适合放进简历，因为它把感知、坐标系、运动学和规划串起来了。</p>
+<hr>
+<h2 id="十、前沿动态：2026-05-时点应该关注什么"><a href="#十、前沿动态：2026-05-时点应该关注什么" class="headerlink" title="十、前沿动态：2026-05 时点应该关注什么"></a>十、前沿动态：2026-05 时点应该关注什么</h2><p>感知与三维理解变化很快，尤其是大模型进入机器人之后，很多传统模块正在被重新组合。</p>
+<p>下面是当前值得跟踪的方向。</p>
+<h3 id="10-1-开放词汇感知正在变成机器人入口"><a href="#10-1-开放词汇感知正在变成机器人入口" class="headerlink" title="10.1 开放词汇感知正在变成机器人入口"></a>10.1 开放词汇感知正在变成机器人入口</h3><p>传统机器人视觉常常依赖固定类别。</p>
+<p>现在更重要的是：</p>
+<p><strong>机器人能不能根据语言找到目标。</strong></p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">pick up the blue cup near the keyboard</span><br><span class="line">go to the open doorway</span><br><span class="line">find the tool that can tighten this screw</span><br></pre></td></tr></table></figure>
+
+<p>这会把 SAM 2、Grounding DINO、CLIP、VLM 和 VLA 模型接到机器人任务层。</p>
+<p>但要注意：开放词汇模型本身并不等于机器人智能。</p>
+<p>它还必须接：</p>
+<ul>
+<li>深度</li>
+<li>坐标变换</li>
+<li>规划</li>
+<li>控制</li>
+<li>失败检测</li>
+</ul>
+<h3 id="10-2-三维表示正在从点云走向可学习场景"><a href="#10-2-三维表示正在从点云走向可学习场景" class="headerlink" title="10.2 三维表示正在从点云走向可学习场景"></a>10.2 三维表示正在从点云走向可学习场景</h3><p>NeRF、3D Gaussian Splatting、神经场这类方法让三维重建效果变得很强。</p>
+<p>但机器人真正关心的是：</p>
+<ul>
+<li>能不能实时</li>
+<li>能不能更新</li>
+<li>能不能规划</li>
+<li>能不能处理动态物体</li>
+<li>能不能输出碰撞几何</li>
+</ul>
+<p>所以未来的重点不是“重建图好不好看”，而是：</p>
+<p><strong>三维表示能不能支撑机器人行动。</strong></p>
+<h3 id="10-3-SLAM-不会消失，但会和语义、学习更紧密"><a href="#10-3-SLAM-不会消失，但会和语义、学习更紧密" class="headerlink" title="10.3 SLAM 不会消失，但会和语义、学习更紧密"></a>10.3 SLAM 不会消失，但会和语义、学习更紧密</h3><p>即使 VLA 模型很火，机器人依然需要稳定定位和地图。</p>
+<p>原因很简单：</p>
+<ul>
+<li>控制器需要坐标</li>
+<li>导航需要地图</li>
+<li>抓取需要目标位姿</li>
+<li>长程任务需要空间记忆</li>
+</ul>
+<p>所以 SLAM 不会被视觉大模型直接替代。</p>
+<p>更可能的方向是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">metric SLAM + semantic map + language interface</span><br></pre></td></tr></table></figure>
+
+<p>也就是既有几何一致性，又有语义可查询能力。</p>
+<h3 id="10-4-感知评估会越来越重要"><a href="#10-4-感知评估会越来越重要" class="headerlink" title="10.4 感知评估会越来越重要"></a>10.4 感知评估会越来越重要</h3><p>机器人感知不是只看 mAP。</p>
+<p>真实系统更关心：</p>
+<ul>
+<li>目标位姿误差</li>
+<li>抓取成功率</li>
+<li>导航失败率</li>
+<li>延迟</li>
+<li>稳定性</li>
+<li>长时间运行漂移</li>
+<li>数据闭环后的改进幅度</li>
+</ul>
+<p>所以做项目时，最好不要只展示“识别成功截图”，而要写清楚：</p>
+<p><strong>这个感知结果接到机器人系统后，任务成功率有没有提高。</strong></p>
+<hr>
+<h2 id="十一、常见失效模式"><a href="#十一、常见失效模式" class="headerlink" title="十一、常见失效模式"></a>十一、常见失效模式</h2><p>感知系统最麻烦的地方是：问题常常不是单点错误，而是链路误差叠加。</p>
+<h3 id="11-1-相机看到了，但机器人抓偏"><a href="#11-1-相机看到了，但机器人抓偏" class="headerlink" title="11.1 相机看到了，但机器人抓偏"></a>11.1 相机看到了，但机器人抓偏</h3><p>常见原因：</p>
+<ul>
+<li>外参不准</li>
+<li>深度图边缘噪声</li>
+<li>物体 mask 不稳定</li>
+<li>坐标系方向写反</li>
+<li>机械臂末端工具坐标没标好</li>
+</ul>
+<p>排查顺序：</p>
+<ol>
+<li>固定目标物体。</li>
+<li>打印相机坐标系下的目标点。</li>
+<li>可视化 base 坐标系下的目标点。</li>
+<li>用机械臂低速移动到目标上方。</li>
+<li>检查偏差是否固定方向。</li>
+</ol>
+<p>如果偏差总是固定方向，多半是外参问题。</p>
+<p>如果偏差随机跳，多半是感知或深度噪声问题。</p>
+<h3 id="11-2-SLAM-轨迹突然飞掉"><a href="#11-2-SLAM-轨迹突然飞掉" class="headerlink" title="11.2 SLAM 轨迹突然飞掉"></a>11.2 SLAM 轨迹突然飞掉</h3><p>常见原因：</p>
+<ul>
+<li>特征点太少</li>
+<li>快速运动模糊</li>
+<li>IMU 时间戳不准</li>
+<li>外参错误</li>
+<li>场景重复纹理</li>
+<li>回环检测误匹配</li>
+</ul>
+<p>排查顺序：</p>
+<ol>
+<li>看图像质量。</li>
+<li>看特征点数量。</li>
+<li>看 IMU 是否饱和。</li>
+<li>看时间戳是否单调。</li>
+<li>用 evo 对比误差。</li>
+</ol>
+<h3 id="11-3-点云看起来像“重影”"><a href="#11-3-点云看起来像“重影”" class="headerlink" title="11.3 点云看起来像“重影”"></a>11.3 点云看起来像“重影”</h3><p>常见原因：</p>
+<ul>
+<li>时间同步问题</li>
+<li>位姿估计延迟</li>
+<li>深度相机运动太快</li>
+<li>LiDAR 去畸变没做好</li>
+<li>多帧融合时外参错了</li>
+</ul>
+<p>这类问题一旦出现，后面的分割、抓取和规划都会被污染。</p>
+<h3 id="11-4-开放词汇模型找到目标，但机器人还是失败"><a href="#11-4-开放词汇模型找到目标，但机器人还是失败" class="headerlink" title="11.4 开放词汇模型找到目标，但机器人还是失败"></a>11.4 开放词汇模型找到目标，但机器人还是失败</h3><p>常见原因：</p>
+<ul>
+<li>找到的是 2D 区域，不是 3D 位姿</li>
+<li>目标被遮挡</li>
+<li>分割 mask 包含背景</li>
+<li>深度缺失</li>
+<li>抓取点不可达</li>
+<li>规划器无法绕过障碍物</li>
+</ul>
+<p>所以开放词汇感知一定要接三维和规划，不能停在图片结果。</p>
+<hr>
+<h2 id="十二、这一篇的核心结论"><a href="#十二、这一篇的核心结论" class="headerlink" title="十二、这一篇的核心结论"></a>十二、这一篇的核心结论</h2><p>机器人感知不是“识别图片”，而是把真实世界转换成机器人可执行的任务输入。</p>
+<p>一条完整链路通常是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">sensor</span><br><span class="line">  -&gt; calibration</span><br><span class="line">  -&gt; localization</span><br><span class="line">  -&gt; 3D representation</span><br><span class="line">  -&gt; semantic understanding</span><br><span class="line">  -&gt; task target</span><br><span class="line">  -&gt; planner / controller</span><br></pre></td></tr></table></figure>
+
+<p>这一篇最重要的结论有五个：</p>
+<ol>
+<li>传感器各有失效模式，不存在万能相机。</li>
+<li>标定和时间同步是感知系统的地基。</li>
+<li>SLAM &#x2F; VIO &#x2F; LIO 解决的是定位与建图，不是最终任务。</li>
+<li>三维表示必须能被规划和控制使用，不能只追求视觉效果。</li>
+<li>开放词汇感知很重要，但必须接入深度、坐标系、规划和控制。</li>
+</ol>
+<p>如果你想把这一层做成有履历价值的项目，优先选下面三条：</p>
+<ul>
+<li>RGB-D 目标点云提取</li>
+<li>SLAM 轨迹评估与误差分析</li>
+<li>视觉到机械臂抓取目标闭环</li>
+</ul>
+<p>能把这三条跑通，你对“机器人怎样看世界”就不再停留在概念层了。</p>
+<hr>
+<h2 id="系列导航"><a href="#系列导航" class="headerlink" title="系列导航"></a>系列导航</h2><p>本篇在系列中的位置：</p>
+<p><code>总路线图 -&gt; 数学基础 -&gt; 坐标系 -&gt; 运动学 -&gt; 概率滤波 -&gt; 感知与三维理解 -&gt; 机械臂控制 -&gt; 接触抓取 -&gt; 四足控制 -&gt; 人形控制基础 -&gt; 人形全身控制 -&gt; QP 实现 -&gt; 接触力分配 -&gt; 状态估计</code></p>
+<ul>
+<li>上一篇：<a href="/2026/04/06/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%A6%82%E7%8E%87%E4%B8%8E%E6%BB%A4%E6%B3%A2%EF%BC%9AIMU%E3%80%81%E7%BC%96%E7%A0%81%E5%99%A8%E5%92%8C%E5%8D%A1%E5%B0%94%E6%9B%BC%E6%BB%A4%E6%B3%A2/" title="具身智能中的概率与滤波：IMU、编码器和卡尔曼滤波">具身智能中的概率与滤波：IMU、编码器和卡尔曼滤波</a></li>
+<li>下一篇：<a href="/2026/04/06/%E6%9C%BA%E6%A2%B0%E8%87%82%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%BD%A8%E8%BF%B9%E8%A7%84%E5%88%92%E3%80%81PID%E4%B8%8E%E6%9C%AB%E7%AB%AF%E6%8E%A7%E5%88%B6/" title="机械臂控制基础：轨迹规划、PID 与末端控制">机械臂控制基础：轨迹规划、PID 与末端控制</a></li>
+<li>回到总路线：<a href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</a></li>
+</ul>
+<link rel="stylesheet" href="/css/spoiler.css" type="text/css"><script src="/js/spoiler.js" type="text/javascript" async></script></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://LJS515.github.io/">YiQiu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://ljs515.github.io/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/">https://ljs515.github.io/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://ljs515.github.io" target="_blank">YiQiuのblog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD/">具身智能</a><a class="post-meta__tags" href="/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA/">机器人</a><a class="post-meta__tags" href="/tags/%E6%84%9F%E7%9F%A5/">感知</a><a class="post-meta__tags" href="/tags/SLAM/">SLAM</a><a class="post-meta__tags" href="/tags/%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3/">三维理解</a><a class="post-meta__tags" href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/">开源项目</a></div><div class="post-share"><div class="social-share" data-image="/img/04.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>感谢您的支持</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechat.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wechat.jpg" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpg" alt="alipay"/></a><div class="post-qr-code-desc">alipay</div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width no-desc" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"><img class="cover" src="/img/04.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related no-desc" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F/" title="人形机器人中的接触力分配与支撑约束"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人中的接触力分配与支撑约束</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%EF%BC%9A%E4%BB%BB%E5%8A%A1%E3%80%81%E7%BA%A6%E6%9D%9F%E4%B8%8EQP/" title="人形机器人全身控制：任务、约束与 QP"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人全身控制：任务、约束与 QP</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/06/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%B4%A8%E5%BF%83%E3%80%81ZMP%E4%B8%8E%E6%AD%A5%E6%80%81/" title="人形机器人控制基础：质心、ZMP 与步态"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-06</div><div class="info-item-2">人形机器人控制基础：质心、ZMP 与步态</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E5%8A%A8%E5%8A%9B%E5%AD%A6%E6%96%B9%E7%A8%8B%E5%88%B0QP%E6%B1%82%E8%A7%A3/" title="人形机器人中的全身控制实现：从动力学方程到 QP 求解"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人中的全身控制实现：从动力学方程到 QP 求解</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="author-info-name">YiQiu</div><div class="author-info-description">专注于嵌入式技术研究 | ROS学习之路 | 深度学习&人工智能 | 算法研究</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">16</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">35</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" href="https://LJS515.github.io/"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/LJS515" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:3435583503@qq.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><style>
+.announcement-card {
+    --main-color: #ff00ff;
+    --secondary-color: #00ffff;
+    --highlight-color: #ff5500;
+    position: relative;
+    overflow: hidden;
+}
+.announcement-content {
+    font-size: 1rem; 
+    line-height: 1.2; 
+    color: #ffffff;
+    position: relative;
+}
+.keyword {
+    color: var(--secondary-color);
+    font-weight: 300;
+    font-size: 1.1rem; 
+}
+.highlight {
+    color: var(--main-color);
+    font-weight: 1000;
+    font-size: 1.2rem; 
+}
+.announcement-content ul {
+    list-style-type: none;
+    margin: 0.8rem 0; 
+    padding-left: 1.5rem;   
+}
+</style>
+<div class="announcement-card">
+    <div class="announcement-content">
+        <p><span class="highlight">欢迎来到「YiQiu」ROS&AI研习录</span>！🎉</p>
+        <p><strong>本平台专注于：</strong></p>
+        <ul>
+            <li><span class="keyword">> 嵌入式系统开发</span></li>
+            <li><span class="keyword">> ROS学习</span></li>
+            <li><span class="keyword">> 算法研究</span></li>
+            <li><span class="keyword">> 深度学习&人工智能</span></li>
+        </ul>
+        <p>🌟 <strong>加入我们，一起探索机器人的奥秘，提升AI实战能力，共同创造更美好的人工智能！</strong></p>
+    </div>
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM-%E4%B8%8E-3D-%E8%A1%A8%E7%A4%BA"><span class="toc-number">1.</span> <span class="toc-text">具身智能中的感知与三维理解：相机、SLAM 与 3D 表示</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%84%9F%E7%9F%A5%E5%88%B0%E5%BA%95%E5%9C%A8%E8%A7%A3%E5%86%B3%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98"><span class="toc-number">1.1.</span> <span class="toc-text">一、机器人感知到底在解决什么问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E6%88%91%E5%9C%A8%E5%93%AA%E9%87%8C"><span class="toc-number">1.1.1.</span> <span class="toc-text">1.1 我在哪里</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E5%91%A8%E5%9B%B4%E7%8E%AF%E5%A2%83%E9%95%BF%E4%BB%80%E4%B9%88%E6%A0%B7"><span class="toc-number">1.1.2.</span> <span class="toc-text">1.2 周围环境长什么样</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3-%E7%9B%AE%E6%A0%87%E7%89%A9%E4%BD%93%E5%9C%A8%E5%93%AA%E9%87%8C"><span class="toc-number">1.1.3.</span> <span class="toc-text">1.3 目标物体在哪里</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-4-%E5%93%AA%E4%BA%9B%E4%B8%9C%E8%A5%BF%E5%8F%AF%E4%BB%A5%E4%BA%A4%E4%BA%92"><span class="toc-number">1.1.4.</span> <span class="toc-text">1.4 哪些东西可以交互</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-5-%E6%84%9F%E7%9F%A5%E7%BB%93%E6%9E%9C%E8%83%BD%E4%B8%8D%E8%83%BD%E8%A2%AB%E6%8E%A7%E5%88%B6%E5%99%A8%E4%BD%BF%E7%94%A8"><span class="toc-number">1.1.5.</span> <span class="toc-text">1.5 感知结果能不能被控制器使用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E6%84%9F%E7%9F%A5%E9%93%BE%E8%B7%AF%E7%9A%84%E6%80%BB%E7%BB%93%E6%9E%84"><span class="toc-number">1.2.</span> <span class="toc-text">二、感知链路的总结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E4%BC%A0%E6%84%9F%E5%99%A8%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81RGB-D%E3%80%81LiDAR-%E5%92%8C-IMU"><span class="toc-number">1.3.</span> <span class="toc-text">三、传感器：相机、RGB-D、LiDAR 和 IMU</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E6%99%AE%E9%80%9A%E7%9B%B8%E6%9C%BA"><span class="toc-number">1.3.1.</span> <span class="toc-text">3.1 普通相机</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E5%8F%8C%E7%9B%AE%E7%9B%B8%E6%9C%BA"><span class="toc-number">1.3.2.</span> <span class="toc-text">3.2 双目相机</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-RGB-D-%E7%9B%B8%E6%9C%BA"><span class="toc-number">1.3.3.</span> <span class="toc-text">3.3 RGB-D 相机</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-LiDAR"><span class="toc-number">1.3.4.</span> <span class="toc-text">3.4 LiDAR</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-IMU"><span class="toc-number">1.3.5.</span> <span class="toc-text">3.5 IMU</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E6%A0%87%E5%AE%9A%E4%B8%8E%E5%90%8C%E6%AD%A5%EF%BC%9A%E6%84%9F%E7%9F%A5%E7%B3%BB%E7%BB%9F%E6%9C%80%E5%AE%B9%E6%98%93%E8%A2%AB%E4%BD%8E%E4%BC%B0%E7%9A%84%E9%83%A8%E5%88%86"><span class="toc-number">1.4.</span> <span class="toc-text">四、标定与同步：感知系统最容易被低估的部分</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E5%86%85%E5%8F%82%E6%A0%87%E5%AE%9A"><span class="toc-number">1.4.1.</span> <span class="toc-text">4.1 内参标定</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E5%A4%96%E5%8F%82%E6%A0%87%E5%AE%9A"><span class="toc-number">1.4.2.</span> <span class="toc-text">4.2 外参标定</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-%E6%89%8B%E7%9C%BC%E6%A0%87%E5%AE%9A"><span class="toc-number">1.4.3.</span> <span class="toc-text">4.3 手眼标定</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-%E6%97%B6%E9%97%B4%E5%90%8C%E6%AD%A5"><span class="toc-number">1.4.4.</span> <span class="toc-text">4.4 时间同步</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-5-%E6%8E%A8%E8%8D%90%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE"><span class="toc-number">1.4.5.</span> <span class="toc-text">4.5 推荐开源项目</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81SLAM%E3%80%81VIO-%E5%92%8C-LIO%EF%BC%9A%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%80%8E%E6%A0%B7%E7%9F%A5%E9%81%93%E8%87%AA%E5%B7%B1%E5%9C%A8%E5%93%AA"><span class="toc-number">1.5.</span> <span class="toc-text">五、SLAM、VIO 和 LIO：机器人怎样知道自己在哪</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E8%A7%86%E8%A7%89-SLAM"><span class="toc-number">1.5.1.</span> <span class="toc-text">5.1 视觉 SLAM</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-VIO"><span class="toc-number">1.5.2.</span> <span class="toc-text">5.2 VIO</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-LIO"><span class="toc-number">1.5.3.</span> <span class="toc-text">5.3 LIO</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-SLAM-%E8%BE%93%E5%87%BA%E6%80%8E%E6%A0%B7%E6%8E%A5%E5%88%B0%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%B3%BB%E7%BB%9F"><span class="toc-number">1.5.4.</span> <span class="toc-text">5.4 SLAM 输出怎样接到机器人系统</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5-%E6%9C%80%E5%B0%8F%E5%AE%9E%E8%B7%B5%E9%A1%B9%E7%9B%AE"><span class="toc-number">1.5.5.</span> <span class="toc-text">5.5 最小实践项目</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E4%B8%89%E7%BB%B4%E8%A1%A8%E7%A4%BA%EF%BC%9A%E7%82%B9%E4%BA%91%E3%80%81%E6%B7%B1%E5%BA%A6%E5%9B%BE%E3%80%81%E4%BD%93%E7%B4%A0%E5%92%8C%E7%A5%9E%E7%BB%8F%E8%A1%A8%E7%A4%BA"><span class="toc-number">1.6.</span> <span class="toc-text">六、三维表示：点云、深度图、体素和神经表示</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E6%B7%B1%E5%BA%A6%E5%9B%BE"><span class="toc-number">1.6.1.</span> <span class="toc-text">6.1 深度图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E7%82%B9%E4%BA%91"><span class="toc-number">1.6.2.</span> <span class="toc-text">6.2 点云</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-TSDF-%E5%92%8C%E4%BD%93%E7%B4%A0%E5%9C%B0%E5%9B%BE"><span class="toc-number">1.6.3.</span> <span class="toc-text">6.3 TSDF 和体素地图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4-Mesh"><span class="toc-number">1.6.4.</span> <span class="toc-text">6.4 Mesh</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-5-NeRF%E3%80%813D-Gaussian-Splatting-%E4%B8%8E%E6%9C%BA%E5%99%A8%E4%BA%BA"><span class="toc-number">1.6.5.</span> <span class="toc-text">6.5 NeRF、3D Gaussian Splatting 与机器人</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E8%AF%AD%E4%B9%89%E7%90%86%E8%A7%A3%EF%BC%9A%E6%A3%80%E6%B5%8B%E3%80%81%E5%88%86%E5%89%B2%E3%80%81%E5%BC%80%E6%94%BE%E8%AF%8D%E6%B1%87%E5%92%8C-6D-%E4%BD%8D%E5%A7%BF"><span class="toc-number">1.7.</span> <span class="toc-text">七、语义理解：检测、分割、开放词汇和 6D 位姿</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-%E7%9B%AE%E6%A0%87%E6%A3%80%E6%B5%8B"><span class="toc-number">1.7.1.</span> <span class="toc-text">7.1 目标检测</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-%E5%9B%BE%E5%83%8F%E5%88%86%E5%89%B2"><span class="toc-number">1.7.2.</span> <span class="toc-text">7.2 图像分割</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-%E5%BC%80%E6%94%BE%E8%AF%8D%E6%B1%87%E6%84%9F%E7%9F%A5"><span class="toc-number">1.7.3.</span> <span class="toc-text">7.3 开放词汇感知</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4-6D-%E4%BD%8D%E5%A7%BF%E4%BC%B0%E8%AE%A1"><span class="toc-number">1.7.4.</span> <span class="toc-text">7.4 6D 位姿估计</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-5-%E4%BB%8E%E8%AF%AD%E4%B9%89%E5%88%B0%E5%8A%A8%E4%BD%9C"><span class="toc-number">1.7.5.</span> <span class="toc-text">7.5 从语义到动作</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE%E7%9F%A9%E9%98%B5%EF%BC%9A%E6%AF%8F%E4%B8%80%E7%B1%BB%E9%A1%B9%E7%9B%AE%E8%A7%A3%E5%86%B3%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98"><span class="toc-number">1.8.</span> <span class="toc-text">八、开源项目矩阵：每一类项目解决什么问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-SLAM-VIO-LIO"><span class="toc-number">1.8.1.</span> <span class="toc-text">8.1 SLAM &#x2F; VIO &#x2F; LIO</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-%E4%B8%89%E7%BB%B4%E9%87%8D%E5%BB%BA%E4%B8%8E%E7%82%B9%E4%BA%91"><span class="toc-number">1.8.2.</span> <span class="toc-text">8.2 三维重建与点云</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-%E6%A0%87%E5%AE%9A%E4%B8%8E%E5%B7%A5%E5%85%B7%E9%93%BE"><span class="toc-number">1.8.3.</span> <span class="toc-text">8.3 标定与工具链</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-4-%E5%BC%80%E6%94%BE%E8%AF%8D%E6%B1%87%E6%84%9F%E7%9F%A5"><span class="toc-number">1.8.4.</span> <span class="toc-text">8.4 开放词汇感知</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E6%9C%80%E6%8E%A8%E8%8D%90%E5%81%9A%E7%9A%84%E4%B8%89%E4%B8%AA%E9%A1%B9%E7%9B%AE"><span class="toc-number">1.9.</span> <span class="toc-text">九、最推荐做的三个项目</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-%E9%A1%B9%E7%9B%AE%E4%B8%80%EF%BC%9ARGB-D-%E7%89%A9%E4%BD%93%E7%82%B9%E4%BA%91%E6%8F%90%E5%8F%96"><span class="toc-number">1.9.1.</span> <span class="toc-text">9.1 项目一：RGB-D 物体点云提取</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-%E9%A1%B9%E7%9B%AE%E4%BA%8C%EF%BC%9ASLAM-%E8%BD%A8%E8%BF%B9%E8%AF%84%E4%BC%B0%E4%B8%8E%E8%AF%AF%E5%B7%AE%E5%88%86%E6%9E%90"><span class="toc-number">1.9.2.</span> <span class="toc-text">9.2 项目二：SLAM 轨迹评估与误差分析</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-3-%E9%A1%B9%E7%9B%AE%E4%B8%89%EF%BC%9A%E8%A7%86%E8%A7%89%E5%88%B0%E6%9C%BA%E6%A2%B0%E8%87%82%E6%8A%93%E5%8F%96%E7%9B%AE%E6%A0%87"><span class="toc-number">1.9.3.</span> <span class="toc-text">9.3 项目三：视觉到机械臂抓取目标</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E5%89%8D%E6%B2%BF%E5%8A%A8%E6%80%81%EF%BC%9A2026-05-%E6%97%B6%E7%82%B9%E5%BA%94%E8%AF%A5%E5%85%B3%E6%B3%A8%E4%BB%80%E4%B9%88"><span class="toc-number">1.10.</span> <span class="toc-text">十、前沿动态：2026-05 时点应该关注什么</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-%E5%BC%80%E6%94%BE%E8%AF%8D%E6%B1%87%E6%84%9F%E7%9F%A5%E6%AD%A3%E5%9C%A8%E5%8F%98%E6%88%90%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A5%E5%8F%A3"><span class="toc-number">1.10.1.</span> <span class="toc-text">10.1 开放词汇感知正在变成机器人入口</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-%E4%B8%89%E7%BB%B4%E8%A1%A8%E7%A4%BA%E6%AD%A3%E5%9C%A8%E4%BB%8E%E7%82%B9%E4%BA%91%E8%B5%B0%E5%90%91%E5%8F%AF%E5%AD%A6%E4%B9%A0%E5%9C%BA%E6%99%AF"><span class="toc-number">1.10.2.</span> <span class="toc-text">10.2 三维表示正在从点云走向可学习场景</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-3-SLAM-%E4%B8%8D%E4%BC%9A%E6%B6%88%E5%A4%B1%EF%BC%8C%E4%BD%86%E4%BC%9A%E5%92%8C%E8%AF%AD%E4%B9%89%E3%80%81%E5%AD%A6%E4%B9%A0%E6%9B%B4%E7%B4%A7%E5%AF%86"><span class="toc-number">1.10.3.</span> <span class="toc-text">10.3 SLAM 不会消失，但会和语义、学习更紧密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-4-%E6%84%9F%E7%9F%A5%E8%AF%84%E4%BC%B0%E4%BC%9A%E8%B6%8A%E6%9D%A5%E8%B6%8A%E9%87%8D%E8%A6%81"><span class="toc-number">1.10.4.</span> <span class="toc-text">10.4 感知评估会越来越重要</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E5%B8%B8%E8%A7%81%E5%A4%B1%E6%95%88%E6%A8%A1%E5%BC%8F"><span class="toc-number">1.11.</span> <span class="toc-text">十一、常见失效模式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-%E7%9B%B8%E6%9C%BA%E7%9C%8B%E5%88%B0%E4%BA%86%EF%BC%8C%E4%BD%86%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8A%93%E5%81%8F"><span class="toc-number">1.11.1.</span> <span class="toc-text">11.1 相机看到了，但机器人抓偏</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-SLAM-%E8%BD%A8%E8%BF%B9%E7%AA%81%E7%84%B6%E9%A3%9E%E6%8E%89"><span class="toc-number">1.11.2.</span> <span class="toc-text">11.2 SLAM 轨迹突然飞掉</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-3-%E7%82%B9%E4%BA%91%E7%9C%8B%E8%B5%B7%E6%9D%A5%E5%83%8F%E2%80%9C%E9%87%8D%E5%BD%B1%E2%80%9D"><span class="toc-number">1.11.3.</span> <span class="toc-text">11.3 点云看起来像“重影”</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-4-%E5%BC%80%E6%94%BE%E8%AF%8D%E6%B1%87%E6%A8%A1%E5%9E%8B%E6%89%BE%E5%88%B0%E7%9B%AE%E6%A0%87%EF%BC%8C%E4%BD%86%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BF%98%E6%98%AF%E5%A4%B1%E8%B4%A5"><span class="toc-number">1.11.4.</span> <span class="toc-text">11.4 开放词汇模型找到目标，但机器人还是失败</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81%E8%BF%99%E4%B8%80%E7%AF%87%E7%9A%84%E6%A0%B8%E5%BF%83%E7%BB%93%E8%AE%BA"><span class="toc-number">1.12.</span> <span class="toc-text">十二、这一篇的核心结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%B3%BB%E5%88%97%E5%AF%BC%E8%88%AA"><span class="toc-number">1.13.</span> <span class="toc-text">系列导航</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/" title="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示"/></a><div class="content"><a class="title" href="/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/" title="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示">具身智能中的感知与三维理解：相机、SLAM 与 3D 表示</a><time datetime="2026-05-22T04:10:00.000Z" title="发表于 2026-05-22 12:10:00">2026-05-22</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"/></a><div class="content"><a class="title" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</a><time datetime="2026-04-06T17:30:00.000Z" title="发表于 2026-04-07 01:30:00">2026-04-07</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复"/></a><div class="content"><a class="title" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</a><time datetime="2026-04-06T17:05:00.000Z" title="发表于 2026-04-07 01:05:00">2026-04-07</time></div></div></div></div></div></div></main><footer id="footer" style="background-color: rgba(45, 10, 61, 0.2);"><div class="footer-other"><div class="footer-copyright"></div><div class="footer_custom_text"><style>
+  .footer {
+    text-align: center;
+    position: relative;
+  }
+  .social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .social-links i {
+    color: #8400ff;
+  }
+  .social-link {
+    color: #8a2be2;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: rgba(138, 43, 226, 0.1);
+  }
+  .social-link:hover {
+    color: #ffffff;
+    background: #892be2;
+    transform: translateY(-3px) scale(1.08);
+    box-shadow: 0 5px 15px rgba(138, 43, 226, 0.4);
+    text-decoration: none !important;
+  }
+  .footer p {
+    margin: 0.5rem 0;
+    line-height: 1.4;
+  }
+  .copyright {
+    font-size: 1.1rem;
+    color: #c08bdf;
+    font-weight: 400;
+  }
+  .tagline {
+    font-size: 0.8rem;
+    color: #8a2be2;
+    font-style: italic;
+    font-weight: 500;
+  }
+  .footer-note {
+    font-size: 0.78rem;
+    color: rgba(219, 142, 255, 0.8);
+  }
+</style>
+<div class="footer">
+  <div class="social-links">
+    <a href="https://github.com/LJS515" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+    <a href="https://blog.csdn.net/2401_84593538" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="CSDN" title="CSDN">
+      <i class="fas fa-code"></i>
+    </a>
+    <a href="https://www.xiaohongshu.com/user/profile/5e8a0aae0000000001002ce4" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="小红书" title="小红书">
+      <i class="fas fa-book"></i>
+    </a>
+    <a href="https://space.bilibili.com/1158177941" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="bilibili" title="bilibili">
+      <i class="fab fa-bilibili"></i>
+    </a>
+  </div>
+  <p class="copyright">© 2025 YiQiuのblog</p>
+  <p class="tagline">&gt; Stay curious, stay hacking, stay anime! &lt;</p>
+  <p class="footer-note">静态站点不再展示伪造访问量。后续如需真实统计，建议接入 Umami、Google Analytics 或 Cloudflare Web Analytics。</p>
+</div>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.2"></script><script src="/js/main.js?v=5.5.2"></script><div class="js-pjax"></div><script defer src="/js/cursor.js"></script><script src="/js/sakura.js"></script><meting-js class="no-destroy" id="8932390" server="netease" type="playlist" fixed="true" autoplay="true" order="random" volume="0.3" list-folded="false" list-max-height="36vh"> </meting-js><link rel="stylesheet" href="https://npm.elemecdn.com/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'"><script src="https://npm.elemecdn.com/aplayer/dist/APlayer.min.js"></script><script src="https://npm.elemecdn.com/meting/dist/Meting.min.js"></script><script>(() => {
+  const destroyAplayer = () => {
+    if (window.aplayers) {
+      for (let i = 0; i < window.aplayers.length; i++) {
+        if (!window.aplayers[i].options.fixed) {
+          window.aplayers[i].destroy()
+        }
+      }
+    }
+  }
+
+  const runMetingJS = () => {
+    typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+  }
+
+  btf.addGlobalFn('pjaxSend', destroyAplayer, 'destroyAplayer')
+  btf.addGlobalFn('pjaxComplete', loadMeting, 'runMetingJS')
+})()</script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      const usePjax = true
+      true
+        ? (usePjax ? pjax.loadUrl('/404.html') : window.location.href = '/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})()</script><script async data-pjax src="/"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词..." type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.2"></script></div></div><!-- hexo injector body_end start --><script data-pjax>
+  function butterfly_categories_card_injector_config(){
+    // 检查容器是否存在
+    var parent_div_git = document.getElementById('recent-posts');
+    // 如果容器不存在，则动态创建
+    if (!parent_div_git) {
+      console.warn('butterfly_categories_card: 挂载容器不存在，正在动态创建...');
+      // 创建新容器（默认插入到页面主体顶部）
+      parent_div_git = document.createElement('div');
+      parent_div_git.id = 'recent-posts'; // 赋予配置的ID
+      document.querySelector('#page').prepend(parent_div_git); // 插入到 #content-inner 内
+    }
+    var item_html = '<style>li.categoryBar-list-item{width:32.3%;}.categoryBar-list{max-height: 950px;overflow:auto;}.categoryBar-list::-webkit-scrollbar{width:0!important}@media screen and (max-width: 650px){.categoryBar-list{max-height: 800px;}}</style><div class="recent-post-item" style="height:auto;width:100%;padding:0px;"><div id="categoryBar"><ul class="categoryBar-list"><li class="categoryBar-list-item" style="background:url(/img/11.png);"> <a class="categoryBar-list-link" onclick="pjax.loadUrl(&quot;/categories/具身智能教程/&quot;);" href="javascript:void(0);">具身智能教程</a><span class="categoryBar-list-count">14</span><span class="categoryBar-list-descr">1</span></li></ul></div></div>';
+    console.log('已挂载 butterfly_categories_card');
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+  }
+  // 路径匹配逻辑（使用 startsWith）
+  if (location.pathname.startsWith('/categories/') || '/categories/' === 'all') {
+    butterfly_categories_card_injector_config();
+  }
+  </script><script data-pjax>
+  function butterfly_swiper_injector_config(){
+    var parent_div_git = document.getElementById('recent-posts');
+    var item_html = '<div class="recent-post-item" style="height: auto;width: 100%"><div class="blog-slider swiper-container-fade swiper-container-horizontal" id="swiper_container"><div class="blog-slider__wrp swiper-wrapper" style="transition-duration: 0ms;"></div><div class="blog-slider__pagination swiper-pagination-clickable swiper-pagination-bullets"></div></div></div>';
+    console.log('已挂载butterfly_swiper')
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+    }
+  var elist = 'undefined'.split(',');
+  var cpage = location.pathname;
+  var epage = '/';
+  var flag = 0;
+
+  for (var i=0;i<elist.length;i++){
+    if (cpage.includes(elist[i])){
+      flag++;
+    }
+  }
+
+  if ((epage ==='all')&&(flag == 0)){
+    butterfly_swiper_injector_config();
+  }
+  else if (epage === cpage){
+    butterfly_swiper_injector_config();
+  }
+  </script><script defer src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.js"></script><script defer data-pjax src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper_init.js"></script><!-- hexo injector body_end end --><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"right","width":200,"height":400},"mobile":{"show":true},"react":{"opacity":0.7},"log":false});</script></body></html>
