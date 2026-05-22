@@ -19,10 +19,10 @@ Sakura.prototype.draw = function (cxt) {
 }
 Sakura.prototype.update = function () {
     this.x = this.fn.x(this.x, this.y);
-    this.y = this.fn.y(this.y, this.y);
+    this.y = this.fn.y(this.x, this.y);
     this.r = this.fn.r(this.r);
     if (this.x > window.innerWidth || this.x < 0 || this.y > window.innerHeight || this.y < 0) {
-        this.r = getRandom('fnr');
+        // removed: this.r = getRandom('fnr') is dead code (both branches below reset this.r)
         if (Math.random() > 0.4) {
             this.x = getRandom('x');
             this.y = 0;
@@ -36,7 +36,7 @@ Sakura.prototype.update = function () {
         }
     }
 }
-SakuraList = function () {
+var SakuraList = function () {
     this.list = [];
 }
 SakuraList.prototype.push = function (sakura) {
@@ -116,7 +116,7 @@ function startSakura() {
     cxt = canvas.getContext('2d');
     var sakuraList = new SakuraList();
     for (var i = 0; i < 50; i++) {
-        var sakura, randomX, randomY, randomS, randomR, randomFnx, randomFny;
+        var sakura, randomX, randomY, randomS, randomR, randomFnx, randomFny, randomFnR;
         randomX = getRandom('x');
         randomY = getRandom('y');
         randomR = getRandom('r');
@@ -165,6 +165,9 @@ function stopp() {
     }
 }
 
-window.addEventListener('resize', restartSakura);
-document.addEventListener('pjax:complete', restartSakura);
+if (!window.__sakuraListenersBound) {
+    window.addEventListener('resize', restartSakura);
+    document.addEventListener('pjax:complete', restartSakura);
+    window.__sakuraListenersBound = true;
+}
 

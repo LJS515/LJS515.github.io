@@ -388,10 +388,14 @@ class CrystalCursor {
 // 立即执行函数，创建并管理光标实例
 (() => {
     const stateKey = '__crystalCursorInstance';
+    const isTouchDevice = () => window.matchMedia("(hover: none)").matches;
     const mount = () => {
         if (window[stateKey]) {
             window[stateKey].destroy();
+            window[stateKey] = null;
         }
+        // 触摸设备不挂载，避免空实例在 pjax 切页时调用 destroy 触发 TypeError
+        if (isTouchDevice()) return;
         window[stateKey] = new CrystalCursor();
     };
 

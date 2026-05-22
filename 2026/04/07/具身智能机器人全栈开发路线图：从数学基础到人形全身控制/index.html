@@ -1,28 +1,31 @@
-<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>具身智能机器人全栈开发路线图：从数学基础到人形全身控制 | YiQiuのblog</title><meta name="author" content="YiQiu"><meta name="copyright" content="YiQiu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#f5f0fa"><meta name="description" content="具身智能机器人全栈开发路线图：从数学基础到人形全身控制具身智能机器人不是单一算法问题。 真正做系统时，它会同时牵涉：  机械结构 电机与驱动器 传感器 坐标系 运动学 动力学 状态估计 控制器 仿真 感知模型 接触与抓取  如果学习路线没有层级，很容易出现一个问题： 上层概念看了很多，底层闭环却跑不起来。 这篇文章作为本系列的路线图，不展开具体公式推导，而是梳理工程依赖关系： 先学什么，为什么学，">
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制 | YiQiuのblog</title><meta name="author" content="YiQiu"><meta name="copyright" content="YiQiu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#f5f0fa"><meta name="description" content="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制具身智能机器人不是单一算法问题。 真正做系统时，它会同时牵涉：  机械结构 电机与驱动器 传感器 坐标系 运动学 动力学 状态估计 控制器 仿真 感知模型 接触与抓取  如果学习路线没有层级，很容易出现一个问题： 上层概念看了很多，底层闭环却跑不起来。 这篇文章作为本系列的路线图，不展开具体公式推导，而是梳理工程依赖关系： 先学什么，">
 <meta property="og:type" content="article">
-<meta property="og:title" content="具身智能机器人全栈开发路线图：从数学基础到人形全身控制">
+<meta property="og:title" content="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制">
 <meta property="og:url" content="https://ljs515.github.io/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/index.html">
 <meta property="og:site_name" content="YiQiuのblog">
-<meta property="og:description" content="具身智能机器人全栈开发路线图：从数学基础到人形全身控制具身智能机器人不是单一算法问题。 真正做系统时，它会同时牵涉：  机械结构 电机与驱动器 传感器 坐标系 运动学 动力学 状态估计 控制器 仿真 感知模型 接触与抓取  如果学习路线没有层级，很容易出现一个问题： 上层概念看了很多，底层闭环却跑不起来。 这篇文章作为本系列的路线图，不展开具体公式推导，而是梳理工程依赖关系： 先学什么，为什么学，">
+<meta property="og:description" content="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制具身智能机器人不是单一算法问题。 真正做系统时，它会同时牵涉：  机械结构 电机与驱动器 传感器 坐标系 运动学 动力学 状态估计 控制器 仿真 感知模型 接触与抓取  如果学习路线没有层级，很容易出现一个问题： 上层概念看了很多，底层闭环却跑不起来。 这篇文章作为本系列的路线图，不展开具体公式推导，而是梳理工程依赖关系： 先学什么，">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://ljs515.github.io/img/04.png">
 <meta property="article:published_time" content="2026-04-06T17:30:00.000Z">
-<meta property="article:modified_time" content="2026-04-07T10:43:41.308Z">
+<meta property="article:modified_time" content="2026-05-21T04:00:00.000Z">
 <meta property="article:author" content="YiQiu">
 <meta property="article:tag" content="具身智能">
 <meta property="article:tag" content="机器人">
 <meta property="article:tag" content="人形机器人">
 <meta property="article:tag" content="全栈开发">
 <meta property="article:tag" content="学习路线">
+<meta property="article:tag" content="机器人学习">
+<meta property="article:tag" content="强化学习">
+<meta property="article:tag" content="开源项目">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://ljs515.github.io/img/04.png"><script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
-  "headline": "具身智能机器人全栈开发路线图：从数学基础到人形全身控制",
+  "headline": "机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制",
   "url": "https://ljs515.github.io/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/",
   "image": "https://ljs515.github.io/img/04.png",
   "datePublished": "2026-04-06T17:30:00.000Z",
-  "dateModified": "2026-04-07T10:43:41.308Z",
+  "dateModified": "2026-05-21T04:00:00.000Z",
   "author": [
     {
       "@type": "Person",
@@ -159,11 +162,11 @@
   },
   autoDarkmode: false
 }</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
-  title: '具身智能机器人全栈开发路线图：从数学基础到人形全身控制',
+  title: '机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制',
   isHighlightShrink: false,
   isToc: true,
   pageType: 'post'
-}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Chewy&family=Fredoka+One&family=Caveat:wght@400;700&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet"><!-- hexo injector head_end start --><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiperstyle.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="/css/categorybar.css"><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-image: url(/img/03.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">29</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/04.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/img/01.png" alt="Logo"><span class="site-name">YiQiuのblog</span></a><a class="nav-page-title" href="/"><span class="site-name">具身智能机器人全栈开发路线图：从数学基础到人形全身控制</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">具身智能机器人全栈开发路线图：从数学基础到人形全身控制</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-04-06T17:30:00.000Z" title="发表于 2026-04-07 01:30:00">2026-04-07</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-04-07T10:43:41.308Z" title="更新于 2026-04-07 18:43:41">2026-04-07</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%95%99%E7%A8%8B/">具身智能教程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">2.9k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>8分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div class="ai-summary"><div class="ai-explanation" style="display: block;" data-summary="这篇文章作为具身智能机器人全栈开发系列的路线图，按工程依赖关系整理数学基础、空间表示、运动学、状态估计、机械臂控制、四足控制、人形全身控制、接触与抓取等主题之间的学习顺序。目标不是罗列概念，而是建立一条从基础公式到真实机器人闭环系统的技术主线，方便后续围绕硬件、仿真、控制、感知和具身操作持续扩展。">YiQiuAI正在绞尽脑汁想思路ING···</div><div class="ai-title"> <div class="ai-title-left"> <i class="fa-brands fa-slack"></i><div class="ai-title-text">YiQiuのAI摘要</div></div><div class="ai-tag" id="ai-tag">HunYuan-Lite</div></div></div><div id="post-outdate-notice" data="{&quot;limitDay&quot;:365,&quot;messagePrev&quot;:&quot;本文最后更新于&quot;,&quot;messageNext&quot;:&quot;天前，部分内容可能已失效&quot;,&quot;postUpdate&quot;:&quot;2026-04-07 18:43:41&quot;}" hidden></div><h1 id="具身智能机器人全栈开发路线图：从数学基础到人形全身控制"><a href="#具身智能机器人全栈开发路线图：从数学基础到人形全身控制" class="headerlink" title="具身智能机器人全栈开发路线图：从数学基础到人形全身控制"></a>具身智能机器人全栈开发路线图：从数学基础到人形全身控制</h1><p>具身智能机器人不是单一算法问题。</p>
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Chewy&family=Fredoka+One&family=Caveat:wght@400;700&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet"><!-- hexo injector head_end start --><link rel="stylesheet" href="/css/categorybar.css"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiperstyle.css" media="print" onload="this.media='all'"><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-image: url(/img/03.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">32</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/04.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/img/01.png" alt="Logo"><span class="site-name">YiQiuのblog</span></a><a class="nav-page-title" href="/"><span class="site-name">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-04-06T17:30:00.000Z" title="发表于 2026-04-07 01:30:00">2026-04-07</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-05-21T04:00:00.000Z" title="更新于 2026-05-21 12:00:00">2026-05-21</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%95%99%E7%A8%8B/">具身智能教程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">8.2k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>26分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div class="ai-summary"><div class="ai-explanation" style="display: block;" data-summary="这篇文章作为机器人与具身智能全栈开发系列的路线图，按工程依赖关系整理数学基础、空间表示、运动学、状态估计、机械臂控制、四足控制、人形全身控制、接触与抓取等主题之间的学习顺序。目标不是罗列概念，而是建立一条从基础公式到真实机器人闭环系统的技术主线，方便后续围绕硬件、仿真、控制、感知、强化学习与机器人学习持续扩展。">YiQiuAI正在绞尽脑汁想思路ING···</div><div class="ai-title"> <div class="ai-title-left"> <i class="fa-brands fa-slack"></i><div class="ai-title-text">YiQiuのAI摘要</div></div><div class="ai-tag" id="ai-tag">HunYuan-Lite</div></div></div><div id="post-outdate-notice" data="{&quot;limitDay&quot;:365,&quot;messagePrev&quot;:&quot;本文最后更新于&quot;,&quot;messageNext&quot;:&quot;天前，部分内容可能已失效&quot;,&quot;postUpdate&quot;:&quot;2026-05-21 12:00:00&quot;}" hidden></div><h1 id="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"><a href="#机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制" class="headerlink" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"></a>机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</h1><p>具身智能机器人不是单一算法问题。</p>
 <p>真正做系统时，它会同时牵涉：</p>
 <ul>
 <li>机械结构</li>
@@ -182,6 +185,7 @@
 <p><strong>上层概念看了很多，底层闭环却跑不起来。</strong></p>
 <p>这篇文章作为本系列的路线图，不展开具体公式推导，而是梳理工程依赖关系：</p>
 <p><strong>先学什么，为什么学，学到什么程度，下一层会接到哪里。</strong></p>
+<p>读这篇时，可以先把它当成一张总地图。后面每一篇文章都会沿着这条线往下走：从数学和坐标系开始，逐步进入运动学、滤波、机械臂控制、接触抓取、四足控制、人形平衡、全身控制和状态估计。</p>
 <hr>
 <h2 id="一、总目标：做能真正工作的机器人系统"><a href="#一、总目标：做能真正工作的机器人系统" class="headerlink" title="一、总目标：做能真正工作的机器人系统"></a>一、总目标：做能真正工作的机器人系统</h2><p>这个系列的目标不是写一组泛泛的 AI 概念文章，而是面向真实机器人全栈开发。</p>
 <p>目标机器人包括：</p>
@@ -203,10 +207,11 @@
 <li>接触与操作</li>
 <li>人形全身控制</li>
 </ol>
+<p><img src="/images/robotics-roadmap/roadmap-layers.png" alt="机器人与具身智能全栈学习路线层级图"></p>
 <hr>
 <h2 id="二、第一层：数学基础"><a href="#二、第一层：数学基础" class="headerlink" title="二、第一层：数学基础"></a>二、第一层：数学基础</h2><p>对应文章：</p>
 <ul>
-<li><a href="%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80.md">具身智能中的数学基础</a></li>
+<li><a href="/2026/04/06/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80/" title="具身智能中的数学基础">具身智能中的数学基础</a></li>
 </ul>
 <p>这一层解决的问题是：</p>
 <p><strong>机器人系统里最常用的数学工具是什么。</strong></p>
@@ -232,7 +237,7 @@
 <hr>
 <h2 id="三、第二层：空间表示"><a href="#三、第二层：空间表示" class="headerlink" title="三、第二层：空间表示"></a>三、第二层：空间表示</h2><p>对应文章：</p>
 <ul>
-<li><a href="%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E5%9D%90%E6%A0%87%E7%B3%BB%E3%80%81%E6%97%8B%E8%BD%AC%E7%9F%A9%E9%98%B5%E4%B8%8E%E5%9B%9B%E5%85%83%E6%95%B0.md">具身智能中的坐标系、旋转矩阵与四元数</a></li>
+<li><a href="/2026/04/06/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E5%9D%90%E6%A0%87%E7%B3%BB%E3%80%81%E6%97%8B%E8%BD%AC%E7%9F%A9%E9%98%B5%E4%B8%8E%E5%9B%9B%E5%85%83%E6%95%B0/" title="具身智能中的坐标系、旋转矩阵与四元数">具身智能中的坐标系、旋转矩阵与四元数</a></li>
 </ul>
 <p>这一层解决的问题是：</p>
 <p><strong>机器人如何描述三维空间。</strong></p>
@@ -259,7 +264,7 @@
 <hr>
 <h2 id="四、第三层：运动学"><a href="#四、第三层：运动学" class="headerlink" title="四、第三层：运动学"></a>四、第三层：运动学</h2><p>对应文章：</p>
 <ul>
-<li><a href="%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BF%90%E5%8A%A8%E5%AD%A6%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E4%BA%8C%E8%BF%9E%E6%9D%86%E5%88%B0%E5%85%AD%E8%BD%B4%E6%9C%BA%E6%A2%B0%E8%87%82.md">机器人运动学入门：从二连杆到六轴机械臂</a></li>
+<li><a href="/2026/04/06/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BF%90%E5%8A%A8%E5%AD%A6%E5%85%A5%E9%97%A8%EF%BC%9A%E4%BB%8E%E4%BA%8C%E8%BF%9E%E6%9D%86%E5%88%B0%E5%85%AD%E8%BD%B4%E6%9C%BA%E6%A2%B0%E8%87%82/" title="机器人运动学入门：从二连杆到六轴机械臂">机器人运动学入门：从二连杆到六轴机械臂</a></li>
 </ul>
 <p>这一层解决的问题是：</p>
 <p><strong>关节怎么决定末端，末端目标又如何反推关节。</strong></p>
@@ -290,8 +295,8 @@
 <hr>
 <h2 id="五、第四层：概率、滤波与状态估计"><a href="#五、第四层：概率、滤波与状态估计" class="headerlink" title="五、第四层：概率、滤波与状态估计"></a>五、第四层：概率、滤波与状态估计</h2><p>对应文章：</p>
 <ul>
-<li><a href="%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%A6%82%E7%8E%87%E4%B8%8E%E6%BB%A4%E6%B3%A2%EF%BC%9AIMU%E3%80%81%E7%BC%96%E7%A0%81%E5%99%A8%E5%92%8C%E5%8D%A1%E5%B0%94%E6%9B%BC%E6%BB%A4%E6%B3%A2.md">具身智能中的概率与滤波：IMU、编码器和卡尔曼滤波</a></li>
-<li><a href="%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D.md">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</a></li>
+<li><a href="/2026/04/06/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%A6%82%E7%8E%87%E4%B8%8E%E6%BB%A4%E6%B3%A2%EF%BC%9AIMU%E3%80%81%E7%BC%96%E7%A0%81%E5%99%A8%E5%92%8C%E5%8D%A1%E5%B0%94%E6%9B%BC%E6%BB%A4%E6%B3%A2/" title="具身智能中的概率与滤波：IMU、编码器和卡尔曼滤波">具身智能中的概率与滤波：IMU、编码器和卡尔曼滤波</a></li>
+<li><a href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</a></li>
 </ul>
 <p>这一层解决的问题是：</p>
 <p><strong>机器人如何知道自己当前处于什么状态。</strong></p>
@@ -323,9 +328,43 @@
 <p>这一层非常关键，因为很多所谓控制问题，本质上是：</p>
 <p><strong>控制器拿到了错误状态。</strong></p>
 <hr>
-<h2 id="六、第五层：机械臂控制"><a href="#六、第五层：机械臂控制" class="headerlink" title="六、第五层：机械臂控制"></a>六、第五层：机械臂控制</h2><p>对应文章：</p>
+<h2 id="六、第五层：感知与三维理解（视觉-SLAM-3D）"><a href="#六、第五层：感知与三维理解（视觉-SLAM-3D）" class="headerlink" title="六、第五层：感知与三维理解（视觉 &#x2F; SLAM &#x2F; 3D）"></a>六、第五层：感知与三维理解（视觉 &#x2F; SLAM &#x2F; 3D）</h2><blockquote>
+<p>本节是对“状态估计”的横向补充：状态估计回答“我现在的位姿与速度是什么”，感知回答“周围有什么、在哪、能不能抓”。两者通过同一条坐标链交付给控制器与规划器。系列内暂未单独成文，计划在下一篇《具身智能中的感知与三维理解》里展开。</p>
+</blockquote>
+<p>这一层解决的问题是：</p>
+<p><strong>机器人如何把原始传感器信号变成对世界的几何与语义理解。</strong></p>
+<p>这一层涉及的话题包括：</p>
 <ul>
-<li><a href="%E6%9C%BA%E6%A2%B0%E8%87%82%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%BD%A8%E8%BF%B9%E8%A7%84%E5%88%92%E3%80%81PID%E4%B8%8E%E6%9C%AB%E7%AB%AF%E6%8E%A7%E5%88%B6.md">机械臂控制基础：轨迹规划、PID与末端控制</a></li>
+<li>相机模型与标定（针孔、鱼眼、双目、深度相机）</li>
+<li>手眼标定与 IMU-相机外参标定</li>
+<li>视觉里程计与视觉惯性里程计（VO &#x2F; VIO）</li>
+<li>视觉 SLAM、激光 SLAM 与视惯-激光融合</li>
+<li>3D 表示：点云、深度图、TSDF、NeRF、3D Gaussian Splatting</li>
+<li>检测、分割、6D 位姿估计</li>
+<li>触觉与力觉感知</li>
+<li>多传感器时间戳同步与坐标链管理</li>
+</ul>
+<p>工程能力目标是：</p>
+<ul>
+<li>能稳定标定单目 &#x2F; 双目 &#x2F; IMU-相机这一类组合</li>
+<li>能跑通一个开源 SLAM 系统，并把输出接到 TF 与状态估计节点</li>
+<li>能从点云或 RGB-D 图像里抽出可抓取目标</li>
+<li>能分辨一次失败是“感知偏了”、“标定漂了”还是“控制超调了”</li>
+</ul>
+<p>推荐并行实践的开源项目（按用法分组）：</p>
+<ul>
+<li><strong>SLAM &#x2F; VIO</strong>：ORB-SLAM3、VINS-Fusion（HKUST）、FAST-LIO2、LIO-SAM、Kimera（MIT）</li>
+<li><strong>3D 表示与重建</strong>：Open3D、COLMAP、nerfstudio、gsplat</li>
+<li><strong>通用视觉与标定</strong>：OpenCV、Kalibr（ETH ASL）、AprilTag</li>
+<li><strong>开放词汇感知</strong>：SAM 2、Grounding DINO、CLIP——把“指物即抓”接入感知层</li>
+<li><strong>触觉</strong>：GelSight 系列开源驱动、DIGIT</li>
+</ul>
+<p>这些项目都能在仿真和真机上跑出可观察的结果，是简历上“做过完整感知闭环”的天然抓手。</p>
+<p>这一层一旦打通，后面机械臂、四足和人形系统才能从“会动”进入“在真实世界里完成任务”。</p>
+<hr>
+<h2 id="七、第六层：机械臂控制"><a href="#七、第六层：机械臂控制" class="headerlink" title="七、第六层：机械臂控制"></a>七、第六层：机械臂控制</h2><p>对应文章：</p>
+<ul>
+<li><a href="/2026/04/06/%E6%9C%BA%E6%A2%B0%E8%87%82%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%BD%A8%E8%BF%B9%E8%A7%84%E5%88%92%E3%80%81PID%E4%B8%8E%E6%9C%AB%E7%AB%AF%E6%8E%A7%E5%88%B6/" title="机械臂控制基础：轨迹规划、PID 与末端控制">机械臂控制基础：轨迹规划、PID 与末端控制</a></li>
 </ul>
 <p>这一层解决的问题是：</p>
 <p><strong>运动学解出来以后，机械臂如何稳定、平滑、可重复地执行。</strong></p>
@@ -353,9 +392,9 @@
 </ul>
 <p>这一层是后续抓取、装配、灵巧操作的基础。</p>
 <hr>
-<h2 id="七、第六层：接触与抓取"><a href="#七、第六层：接触与抓取" class="headerlink" title="七、第六层：接触与抓取"></a>七、第六层：接触与抓取</h2><p>对应文章：</p>
+<h2 id="八、第七层：接触与抓取"><a href="#八、第七层：接触与抓取" class="headerlink" title="八、第七层：接触与抓取"></a>八、第七层：接触与抓取</h2><p>对应文章：</p>
 <ul>
-<li><a href="%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%8A%93%E5%8F%96%EF%BC%9A%E4%BB%8E%E6%9C%BA%E6%A2%B0%E8%87%82%E5%88%B0%E7%81%B5%E5%B7%A7%E6%89%8B.md">具身智能中的接触与抓取：从机械臂到灵巧手</a></li>
+<li><a href="/2026/04/06/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%8A%93%E5%8F%96%EF%BC%9A%E4%BB%8E%E6%9C%BA%E6%A2%B0%E8%87%82%E5%88%B0%E7%81%B5%E5%B7%A7%E6%89%8B/" title="具身智能中的接触与抓取：从机械臂到灵巧手">具身智能中的接触与抓取：从机械臂到灵巧手</a></li>
 </ul>
 <p>这一层解决的问题是：</p>
 <p><strong>机器人如何从“能动”进入“能操作世界”。</strong></p>
@@ -385,9 +424,9 @@
 <p>真正排查时必须按链路看：</p>
 <p><strong>感知、标定、路径、接触、夹持力、搬运过程。</strong></p>
 <hr>
-<h2 id="八、第七层：四足控制"><a href="#八、第七层：四足控制" class="headerlink" title="八、第七层：四足控制"></a>八、第七层：四足控制</h2><p>对应文章：</p>
+<h2 id="九、第八层：四足控制"><a href="#九、第八层：四足控制" class="headerlink" title="九、第八层：四足控制"></a>九、第八层：四足控制</h2><p>对应文章：</p>
 <ul>
-<li><a href="%E5%9B%9B%E8%B6%B3%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%B6%B3%E7%AB%AF%E8%BD%A8%E8%BF%B9%E3%80%81%E8%B4%A8%E5%BF%83%E4%B8%8E%E7%A8%B3%E5%AE%9A%E6%80%A7.md">四足机器人控制基础：足端轨迹、质心与稳定性</a></li>
+<li><a href="/2026/04/06/%E5%9B%9B%E8%B6%B3%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%B6%B3%E7%AB%AF%E8%BD%A8%E8%BF%B9%E3%80%81%E8%B4%A8%E5%BF%83%E4%B8%8E%E7%A8%B3%E5%AE%9A%E6%80%A7/" title="四足机器人控制基础：足端轨迹、质心与稳定性">四足机器人控制基础：足端轨迹、质心与稳定性</a></li>
 </ul>
 <p>这一层解决的问题是：</p>
 <p><strong>机器人如何在接触切换中稳定移动。</strong></p>
@@ -408,18 +447,18 @@
 <p><strong>让机身、足端、接触和时间节奏形成稳定闭环。</strong></p>
 <p>这一层能很好地把运动学、状态估计和控制串起来。</p>
 <hr>
-<h2 id="九、第八层：人形机器人控制"><a href="#九、第八层：人形机器人控制" class="headerlink" title="九、第八层：人形机器人控制"></a>九、第八层：人形机器人控制</h2><p>对应文章：</p>
+<h2 id="十、第九层：人形机器人控制"><a href="#十、第九层：人形机器人控制" class="headerlink" title="十、第九层：人形机器人控制"></a>十、第九层：人形机器人控制</h2><p>对应文章：</p>
 <ul>
-<li><a href="%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%B4%A8%E5%BF%83%E3%80%81ZMP%E4%B8%8E%E6%AD%A5%E6%80%81.md">人形机器人控制基础：质心、ZMP与步态</a></li>
-<li><a href="%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%EF%BC%9A%E4%BB%BB%E5%8A%A1%E3%80%81%E7%BA%A6%E6%9D%9F%E4%B8%8EQP.md">人形机器人全身控制：任务、约束与QP</a></li>
-<li><a href="%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E5%8A%A8%E5%8A%9B%E5%AD%A6%E6%96%B9%E7%A8%8B%E5%88%B0QP%E6%B1%82%E8%A7%A3.md">人形机器人中的全身控制实现：从动力学方程到QP求解</a></li>
-<li><a href="%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F.md">人形机器人中的接触力分配与支撑约束</a></li>
-<li><a href="%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D.md">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</a></li>
+<li><a href="/2026/04/06/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%B4%A8%E5%BF%83%E3%80%81ZMP%E4%B8%8E%E6%AD%A5%E6%80%81/" title="人形机器人控制基础：质心、ZMP 与步态">人形机器人控制基础：质心、ZMP 与步态</a></li>
+<li><a href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%EF%BC%9A%E4%BB%BB%E5%8A%A1%E3%80%81%E7%BA%A6%E6%9D%9F%E4%B8%8EQP/" title="人形机器人全身控制：任务、约束与 QP">人形机器人全身控制：任务、约束与 QP</a></li>
+<li><a href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E5%8A%A8%E5%8A%9B%E5%AD%A6%E6%96%B9%E7%A8%8B%E5%88%B0QP%E6%B1%82%E8%A7%A3/" title="人形机器人中的全身控制实现：从动力学方程到 QP 求解">人形机器人中的全身控制实现：从动力学方程到 QP 求解</a></li>
+<li><a href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F/" title="人形机器人中的接触力分配与支撑约束">人形机器人中的接触力分配与支撑约束</a></li>
+<li><a href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</a></li>
 </ul>
 <p>这一层解决的问题是：</p>
 <p><strong>机器人如何在高自由度、多接触、低稳定裕度下完成平衡、行走和操作。</strong></p>
 <p>这条线目前分成五个子主题：</p>
-<h3 id="9-1-质心、ZMP-与步态"><a href="#9-1-质心、ZMP-与步态" class="headerlink" title="9.1 质心、ZMP 与步态"></a>9.1 质心、ZMP 与步态</h3><p>建立人形平衡的基础直觉：</p>
+<h3 id="10-1-质心、ZMP-与步态"><a href="#10-1-质心、ZMP-与步态" class="headerlink" title="10.1 质心、ZMP 与步态"></a>10.1 质心、ZMP 与步态</h3><p>建立人形平衡的基础直觉：</p>
 <ul>
 <li>双支撑</li>
 <li>单支撑</li>
@@ -429,7 +468,7 @@
 <li>Capture Point</li>
 <li>落脚点</li>
 </ul>
-<h3 id="9-2-全身控制框架"><a href="#9-2-全身控制框架" class="headerlink" title="9.2 全身控制框架"></a>9.2 全身控制框架</h3><p>理解为什么人形不能只做关节控制或末端控制，而必须统一处理：</p>
+<h3 id="10-2-全身控制框架"><a href="#10-2-全身控制框架" class="headerlink" title="10.2 全身控制框架"></a>10.2 全身控制框架</h3><p>理解为什么人形不能只做关节控制或末端控制，而必须统一处理：</p>
 <ul>
 <li>任务</li>
 <li>约束</li>
@@ -437,7 +476,7 @@
 <li>冗余</li>
 <li>优先级</li>
 </ul>
-<h3 id="9-3-从动力学方程到-QP"><a href="#9-3-从动力学方程到-QP" class="headerlink" title="9.3 从动力学方程到 QP"></a>9.3 从动力学方程到 QP</h3><p>把全身控制落到实现骨架：</p>
+<h3 id="10-3-从动力学方程到-QP"><a href="#10-3-从动力学方程到-QP" class="headerlink" title="10.3 从动力学方程到 QP"></a>10.3 从动力学方程到 QP</h3><p>把全身控制落到实现骨架：</p>
 <ul>
 <li>浮动基动力学</li>
 <li>广义坐标</li>
@@ -446,14 +485,14 @@
 <li>任务代价项</li>
 <li>摩擦与力矩约束</li>
 </ul>
-<h3 id="9-4-接触力分配与支撑约束"><a href="#9-4-接触力分配与支撑约束" class="headerlink" title="9.4 接触力分配与支撑约束"></a>9.4 接触力分配与支撑约束</h3><p>理解人形为什么不是“脚踩地就稳”，而是要维持：</p>
+<h3 id="10-4-接触力分配与支撑约束"><a href="#10-4-接触力分配与支撑约束" class="headerlink" title="10.4 接触力分配与支撑约束"></a>10.4 接触力分配与支撑约束</h3><p>理解人形为什么不是“脚踩地就稳”，而是要维持：</p>
 <ul>
 <li>法向力非负</li>
 <li>摩擦约束满足</li>
 <li>支撑力连续转移</li>
 <li>压力中心不过边界</li>
 </ul>
-<h3 id="9-5-状态估计闭环"><a href="#9-5-状态估计闭环" class="headerlink" title="9.5 状态估计闭环"></a>9.5 状态估计闭环</h3><p>理解控制器依赖的状态从哪里来：</p>
+<h3 id="10-5-状态估计闭环"><a href="#10-5-状态估计闭环" class="headerlink" title="10.5 状态估计闭环"></a>10.5 状态估计闭环</h3><p>理解控制器依赖的状态从哪里来：</p>
 <ul>
 <li>IMU</li>
 <li>编码器</li>
@@ -464,18 +503,290 @@
 <p>人形这条线的核心结论是：</p>
 <p><strong>人形不是靠某一个步态模板走起来的，而是靠状态估计、接触约束、全身控制和支撑力分配持续闭环。</strong></p>
 <hr>
-<h2 id="十、推荐阅读顺序"><a href="#十、推荐阅读顺序" class="headerlink" title="十、推荐阅读顺序"></a>十、推荐阅读顺序</h2><p>如果从零开始，建议按下面顺序读：</p>
+<h2 id="十一、第十层：仿真平台——从-URDF-到-GPU-并行训练"><a href="#十一、第十层：仿真平台——从-URDF-到-GPU-并行训练" class="headerlink" title="十一、第十层：仿真平台——从 URDF 到 GPU 并行训练"></a>十一、第十层：仿真平台——从 URDF 到 GPU 并行训练</h2><blockquote>
+<p>仿真不属于某一层，而是贯穿所有层。控制器调试、状态估计验证、强化学习训练、视觉数据生成、Sim2Real 评估都发生在仿真里。建议从运动学学完那一刻起就开始接触仿真，越往后越离不开它。</p>
+</blockquote>
+<p>这一层解决的问题是：</p>
+<p><strong>机器人开发如何在真机不可控、不可用、不可重复时保持快速迭代。</strong></p>
+<p>主流仿真器各有侧重，按用途选型：</p>
+<ul>
+<li><strong>MuJoCo</strong>：接触建模和连续动力学口碑最稳，2022 起开源，几乎是机器人 RL&#x2F;控制研究的事实标准</li>
+<li><strong>NVIDIA Isaac Sim &#x2F; Isaac Lab</strong>：GPU 并行（数千环境）训练腿式与操作策略的主力栈</li>
+<li><strong>Genesis</strong>：2024 末开源的高速并行仿真框架，主打训练速度，社区上升期</li>
+<li><strong>Gazebo（gz-sim）</strong>：ROS 生态原生仿真，硬件接口与传感器模型最完整</li>
+<li><strong>PyBullet</strong>：入门门槛最低，API 友好，适合机械臂和抓取早期实验</li>
+<li><strong>SAPIEN</strong>：UCSD 系，操作类研究常用，Articulation 关节件处理细致</li>
+<li><strong>Drake</strong>：MIT&#x2F;TRI 维护，把物理仿真、轨迹优化与接触建模放在同一框架</li>
+<li><strong>Webots</strong>：教学场景常用，开箱即用机器人模型多</li>
+<li><strong>Habitat 2.0 &#x2F; 3.0</strong>：Meta 出品，主打具身导航与人居场景</li>
+</ul>
+<p>资产格式与建模工具也是这一层的必修：</p>
+<ul>
+<li><strong>URDF &#x2F; MJCF &#x2F; USD</strong>：机械描述格式，分别对应 ROS、MuJoCo、Isaac 生态</li>
+<li><strong>mujoco_menagerie</strong>：DeepMind 维护的高质量机器人模型库，Go2、H1、Allegro 等都有官方版</li>
+<li><strong>OnShape-to-Robot、urdf-loaders</strong>：URDF 导出与可视化调试链</li>
+</ul>
+<p>工程能力目标：</p>
+<ul>
+<li>能把一台真机的 URDF &#x2F; MJCF 跑起来并对齐 TF 链</li>
+<li>能用 MuJoCo 或 PyBullet 写一个最小的机械臂 &#x2F; 四足控制 demo</li>
+<li>能在 Isaac Lab 或 legged_gym 里跑通一次步态策略训练，理解并行环境的吞吐量</li>
+<li>能判断仿真是因为”建模偏了”、”接触参数错了”还是”控制器逻辑错了”才输出怪结果</li>
+</ul>
+<p>推荐并行实践的开源项目：</p>
+<ul>
+<li><strong>资产 &#x2F; 模型</strong>：mujoco_menagerie、Isaac Lab assets、Unitree 官方 URDF</li>
+<li><strong>腿式 RL 训练</strong>：legged_gym（ETH&#x2F;RSL）、Humanoid-Gym、Isaac Lab、OmniIsaacGymEnvs</li>
+<li><strong>操作类基线</strong>：ManiSkill2&#x2F;3（SAPIEN）、robosuite（UT Austin）</li>
+<li><strong>轨迹优化 &#x2F; 接触建模</strong>：Drake、Crocoddyl</li>
+<li><strong>训练后端</strong>：rsl_rl、rl_games、Stable-Baselines3、CleanRL</li>
+</ul>
+<p>Sim2Real 是这一层留给下一层（机器人学习）的接口，至少要了解：</p>
+<ul>
+<li>域随机化（Domain Randomization）</li>
+<li>系统辨识（System Identification）</li>
+<li>在线适配（RMA、Adaptation Modules）</li>
+<li>评估指标：真机零样本成功率、相对仿真奖励的退化幅度</li>
+</ul>
+<p>仿真栈做扎实，简历上才能讲清楚”训练—部署—回归”这一整条闭环，而不是只列一句”会用 MuJoCo”。</p>
+<hr>
+<h2 id="十二、第十一层：中间件——ROS-2、DDS-与机器人系统工程"><a href="#十二、第十一层：中间件——ROS-2、DDS-与机器人系统工程" class="headerlink" title="十二、第十一层：中间件——ROS 2、DDS 与机器人系统工程"></a>十二、第十一层：中间件——ROS 2、DDS 与机器人系统工程</h2><blockquote>
+<p>这一层不教算法，教”如何让算法在一台真机上稳定跑起来”。ROS 2 是当前事实标准的机器人中间件，但工程化绕不开 DDS、launch、参数、TF、bag 录制回放、实时性这一整套基础设施。</p>
+</blockquote>
+<p>这一层解决的问题是：</p>
+<p><strong>怎么把感知、控制、状态估计和上层任务这些模块，组织成一个能调试、能复现、能上真机的系统。</strong></p>
+<p>ROS 2 需要建立的基础认知：</p>
+<ul>
+<li>节点、话题、服务、动作（Action）</li>
+<li>QoS：可靠性、历史深度、deadline，跟丢包和时序错位高度相关</li>
+<li>TF2：坐标链管理；它要和状态估计、SLAM、感知全部打通</li>
+<li>launch（Python）、参数声明、生命周期节点</li>
+<li>rosbag2：数据回放是机器人调试最重要的工具之一</li>
+<li>实时性：ros2_control 控制环、Preempt-RT 内核与延迟测量</li>
+</ul>
+<p>ROS 1 vs ROS 2：</p>
+<ul>
+<li>新项目几乎默认 ROS 2（Humble &#x2F; Iron &#x2F; Jazzy）</li>
+<li>ROS 1 还会在老项目和部分工业系统里出现，理解 catkin &#x2F; roscpp 仍有价值</li>
+<li>国内还会接触 CyberRT（百度 Apollo）、RT-Thread、AGV 厂家私有总线，但接口理念大同小异</li>
+</ul>
+<p>工程能力目标：</p>
+<ul>
+<li>能写一个 C++ &#x2F; Python 节点，订阅传感器、发布控制</li>
+<li>能写 launch 文件、配置参数，组织一个 ros2_control 控制器</li>
+<li>能录制 rosbag2 并回放调试一次偶发问题</li>
+<li>能配合 Foxglove 或 rerun 做可视化与日志追踪</li>
+</ul>
+<p>推荐并行实践的开源项目：</p>
+<ul>
+<li><strong>导航与规划</strong>：Nav2、MoveIt 2、OMPL</li>
+<li><strong>控制框架</strong>：ros2_control、controller_manager、SimpleFOC（驱动器端）</li>
+<li><strong>嵌入式接入</strong>：micro-ROS（MCU 上的 ROS 2 客户端）</li>
+<li><strong>NVIDIA 集成</strong>：Isaac ROS（GPU 加速感知节点）</li>
+<li><strong>可视化与日志</strong>：Foxglove Studio、rerun.io、PlotJuggler、RViz2</li>
+<li><strong>桥接通信</strong>：rosbridge_suite、zenoh-bridge-ros2</li>
+</ul>
+<p>机器人项目看上去是控制和学习问题，但 80% 的开发时间花在中间件、调参、节点编排和坐标链维护上。这一层练扎实，简历上能直接体现工程化能力，也是和纯算法岗位拉开差距的部分。</p>
+<hr>
+<h2 id="十三、第十二层：机器人学习——强化学习、模仿学习与-VLA"><a href="#十三、第十二层：机器人学习——强化学习、模仿学习与-VLA" class="headerlink" title="十三、第十二层：机器人学习——强化学习、模仿学习与 VLA"></a>十三、第十二层：机器人学习——强化学习、模仿学习与 VLA</h2><blockquote>
+<p>经典控制走到一定程度，会有两类问题始终绕不开：高维接触下手工建模代价高、跨任务跨本体迁移难。机器人学习就是把数据驱动的方法（RL &#x2F; IL &#x2F; 大模型策略）接到这条工程链路上，但它不是经典控制的替代，而是上层补充——底层稳态闭环依然由前面几层提供。</p>
+</blockquote>
+<p>这一层解决的问题是：</p>
+<p><strong>机器人如何从数据中学策略，并在仿真到真机的迁移中保持可靠性。</strong></p>
+<p>子主题按依赖分四组：</p>
+<h3 id="A-强化学习基础"><a href="#A-强化学习基础" class="headerlink" title="A. 强化学习基础"></a>A. 强化学习基础</h3><ul>
+<li>价值与策略迭代、TD(0)、PPO、SAC、DDPG&#x2F;TD3</li>
+<li>在线 vs 离线 RL、actor-critic、熵正则、GAE</li>
+<li>奖励设计陷阱：sparse vs shaping、奖励 hacking、终止条件</li>
+<li>多智能体与层次化 RL（HRL）</li>
+</ul>
+<p>并行项目：</p>
+<ul>
+<li><strong>Stable-Baselines3</strong> — 教学级 RL 实现，搭一个 PPO baseline 最快</li>
+<li><strong>CleanRL</strong> — 单文件实现，研究复现最适合</li>
+<li><strong>Spinning Up</strong>（OpenAI） — 入门教材级仓库</li>
+<li><strong>Tianshou</strong>、<strong>skrl</strong> — 工程化更强的国产 &#x2F; 开源训练框架</li>
+</ul>
+<h3 id="B-机器人-RL-训练栈（GPU-并行）"><a href="#B-机器人-RL-训练栈（GPU-并行）" class="headerlink" title="B. 机器人 RL 训练栈（GPU 并行）"></a>B. 机器人 RL 训练栈（GPU 并行）</h3><p>把 S4 的仿真栈接到 PPO&#x2F;SAC，规模化训练腿式 &#x2F; 操作策略。</p>
+<ul>
+<li><strong>legged_gym</strong>（ETH RSL） — 四足&#x2F;人形并行训练的源头</li>
+<li><strong>Humanoid-Gym</strong>（清华团队） — 在 legged_gym 之上把人形跑通</li>
+<li><strong>Isaac Lab</strong> — NVIDIA 现役主力，整合 legged_gym 一脉</li>
+<li><strong>rsl_rl</strong>、<strong>rl_games</strong>、<strong>OmniIsaacGymEnvs</strong> — 配套训练后端</li>
+</ul>
+<h3 id="C-模仿学习与数据驱动操作"><a href="#C-模仿学习与数据驱动操作" class="headerlink" title="C. 模仿学习与数据驱动操作"></a>C. 模仿学习与数据驱动操作</h3><p>近两年最火的一条线：用人类示教 + 大模型把”灵巧操作”做出来。</p>
+<ul>
+<li><strong>Diffusion Policy</strong>（Columbia） — 把扩散模型用作动作分布的成熟基线</li>
+<li><strong>ACT &#x2F; ALOHA</strong>（Stanford） — Action Chunking Transformer，双臂遥操数据</li>
+<li><strong>Mobile ALOHA &#x2F; HumanPlus</strong>（Stanford 2024） — 移动操作与人形示教</li>
+<li><strong>Robomimic</strong> — 操作类模仿学习的标准评测套件</li>
+<li><strong>LeRobot</strong>（HuggingFace） — 端到端机器人学习工具链，含 So-100 低成本教学臂</li>
+</ul>
+<h3 id="D-视觉-语言-动作（VLA）与世界模型"><a href="#D-视觉-语言-动作（VLA）与世界模型" class="headerlink" title="D. 视觉-语言-动作（VLA）与世界模型"></a>D. 视觉-语言-动作（VLA）与世界模型</h3><p>机器人学习的”前沿前线”。这一段更新最快，应该按季度复核。</p>
+<ul>
+<li><strong>OpenVLA</strong>（Stanford &#x2F; 2024） — 开源 7B VLA 基线</li>
+<li><strong>Octo</strong>（Berkeley &#x2F; 2024） — 通用机器人策略 transformer</li>
+<li><strong>π0</strong>（Physical Intelligence &#x2F; 2024 Q4） — 业界关注度极高的 VLA 模型</li>
+<li><strong>RT-2 &#x2F; RT-X</strong>（Google &#x2F; 2023） — VLA 起点与 Open X-Embodiment 数据集</li>
+<li><strong>DreamerV3 &#x2F; TD-MPC2</strong> — 世界模型 + 模型预测控制的代表</li>
+<li><strong>Genie &#x2F; GAIA-1</strong> — 世界模型方向的视频生成式基线</li>
+</ul>
+<p>Sim2Real 是这一层的工程门槛：</p>
+<ul>
+<li>域随机化（DR）、系统辨识（SysID）</li>
+<li>在线适配（RMA、AdaptNet）</li>
+<li>真机零样本评估、回放数据集校验、影子模式上线</li>
+</ul>
+<p>工程能力目标：</p>
+<ul>
+<li>能跑通一个 PPO 在 Isaac Lab &#x2F; legged_gym 里的腿式步态训练，并把策略部署到仿真真机回环</li>
+<li>能复现 Diffusion Policy 或 ACT 的一个操作任务（哪怕是夹爪堆方块）</li>
+<li>能读懂一篇 VLA 论文的训练数据来源、网络结构与评估方式</li>
+<li>能解释”为什么仿真很高分但真机掉到 30%”——并知道至少两条排查方向</li>
+</ul>
+<p>简历视角：这一层做出可演示的策略 + 一段真机视频，比刷十篇论文更直接。<br>保持对 LeRobot、Isaac Lab、π0 这类活跃项目的跟进，是这条赛道最便宜的杠杆。</p>
+<hr>
+<h2 id="十四、第十三层：硬件与系统集成——电机、传感器、总线与整机平台"><a href="#十四、第十三层：硬件与系统集成——电机、传感器、总线与整机平台" class="headerlink" title="十四、第十三层：硬件与系统集成——电机、传感器、总线与整机平台"></a>十四、第十三层：硬件与系统集成——电机、传感器、总线与整机平台</h2><blockquote>
+<p>算法栈做得再漂亮，最终都要落到一台真机上。这一层不会写在每天的代码里，但它决定了上面几层能不能跑——电流环带宽不够，全身 QP 也救不回来；总线延迟不可控，状态估计闭环就会震荡。</p>
+</blockquote>
+<p>这一层解决的问题是：</p>
+<p><strong>怎么让一台机器人在物理上具备”被算法可靠控制”的能力。</strong></p>
+<p>需要建立基础认知的硬件子主题：</p>
+<ul>
+<li><strong>执行器</strong>：BLDC + FOC、谐波减速、行星减速、QDD（准直驱）、串联弹性 SEA</li>
+<li><strong>驱动器</strong>：电流环、力矩控制、温度保护、PDO 周期与控制周期对齐</li>
+<li><strong>编码器</strong>：增量 vs 绝对、单圈 vs 多圈、磁编 vs 光编、电气零位标定</li>
+<li><strong>IMU 与 F&#x2F;T 传感器</strong>：噪声密度、bias 漂移、安装振动耦合、量程</li>
+<li><strong>触觉</strong>：力&#x2F;力矩、滑移检测、视触觉（GelSight &#x2F; DIGIT 系）</li>
+<li><strong>通讯总线</strong>：EtherCAT、CAN &#x2F; CAN-FD、RS485、EtherNet&#x2F;IP、私有总线</li>
+<li><strong>嵌入式与实时性</strong>：STM32 &#x2F; ESP32、RTOS、Preempt-RT、cyclictest 测延迟</li>
+<li><strong>电源</strong>：电池规格选型、BMS、隔离与稳压、共地与抗干扰</li>
+<li><strong>结构与机械</strong>：刚度、间隙、热设计、紧急停机回路（E-Stop）</li>
+</ul>
+<p>工程能力目标：</p>
+<ul>
+<li>能读懂一份电机数据手册，并把它和控制带宽、负载惯量对应起来</li>
+<li>能用 ODrive &#x2F; SimpleFOC &#x2F; 自研驱动跑通一只电机的速度 + 力矩控制</li>
+<li>能基于 EtherCAT 主站把 6-8 只电机串成一条控制环</li>
+<li>能用 cyclictest 量化系统抖动，并理解什么样的抖动会让控制器失稳</li>
+<li>能定位”控制器无故震荡”是因为驱动器、总线、机械还是软件</li>
+</ul>
+<p>推荐并行实践的开源项目与参考平台：</p>
+<ul>
+<li><strong>驱动器与电机控制</strong>：ODrive、SimpleFOC、MIT Mini Cheetah Motor Driver、moteus（mjbots）</li>
+<li><strong>EtherCAT &#x2F; 实时</strong>：SOEM、IgH EtherCAT Master、ros2_control + Preempt-RT</li>
+<li><strong>嵌入式接入</strong>：micro-ROS、FreeRTOS、Zephyr、RT-Thread</li>
+<li><strong>开源整机平台</strong>：<ul>
+<li><strong>Solo &#x2F; ODRI</strong>（Open Dynamic Robot Initiative） — 四足 + 双足开源参考</li>
+<li><strong>MIT Mini Cheetah 复刻线</strong> — 四足 QDD 教科书级参考</li>
+<li><strong>MIT Humanoid</strong> — 早期开源人形参考</li>
+<li><strong>LeapHand</strong>（CMU） — 低成本灵巧手开源方案</li>
+<li><strong>SO-100 &#x2F; Koch arm</strong>（LeRobot 生态） — 低成本机械臂，配遥操数据采集</li>
+</ul>
+</li>
+<li><strong>商用整机（按 2024-2025 公开信息整理）</strong>：<ul>
+<li>四足：Unitree Go2 &#x2F; B2、ANYmal、Spot、宇树 Aliengo 系</li>
+<li>人形：Unitree H1 &#x2F; G1、Booster T1、Fourier GR-1、Apptronik Apollo、Figure 02、1X NEO、Tesla Optimus、Sanctuary Phoenix</li>
+<li>机械臂：Franka Research 3、UR 系列、AUBO、JAKA、富士 CRX</li>
+</ul>
+</li>
+</ul>
+<p>简历视角：硬件链路是大多数算法岗位拉不开的地方，但它是工程岗与硬件岗最直接的差异化资产。能写”用 SOEM 把一条 EtherCAT 串到 1kHz 控制环”或”基于 ODrive 自调 FOC 实现 5A 力矩控制”，比泛泛写”熟悉机器人系统”有效得多。</p>
+<hr>
+<h2 id="十五、第十四层：部署、安全与产品化——从能跑到能交付"><a href="#十五、第十四层：部署、安全与产品化——从能跑到能交付" class="headerlink" title="十五、第十四层：部署、安全与产品化——从能跑到能交付"></a>十五、第十四层：部署、安全与产品化——从能跑到能交付</h2><blockquote>
+<p>这一层是被低估最多的部分。研究演示和真正交付一台机器人之间的差距，大多数发生在这里：策略导出、边缘推理、安全包络、影子上线、监控回流。</p>
+</blockquote>
+<p>这一层解决的问题是：</p>
+<p><strong>怎么让一个在仿真和实验室里跑通的方案，稳定运行在真机上、并能被持续迭代。</strong></p>
+<p>需要建立的子主题：</p>
+<ul>
+<li><strong>模型导出与推理加速</strong>：PyTorch → ONNX → TensorRT &#x2F; OpenVINO &#x2F; TVM，量化（FP16 &#x2F; INT8）、算子兼容</li>
+<li><strong>边缘平台</strong>：Jetson Orin &#x2F; Thor、RK3588、地平线 J5 &#x2F; J6、寒武纪、华为 Atlas</li>
+<li><strong>实时与延迟</strong>：策略推理延迟、控制环抖动、感知到动作端到端时延</li>
+<li><strong>安全包络</strong>：碰撞检测、力矩 &#x2F; 速度限幅、关节极限、双层 E-Stop、Cat-3 &#x2F; SIL-2 概念</li>
+<li><strong>影子模式与灰度</strong>：策略不接管但在线评估、A&#x2F;B 发布、回退路径</li>
+<li><strong>数据闭环</strong>：真机轨迹回流、失败案例打标、再训练</li>
+<li><strong>监控</strong>：在线指标、异常检测、日志聚合、长跑稳定性</li>
+</ul>
+<p>工程能力目标：</p>
+<ul>
+<li>能把一个 PyTorch 策略导出 ONNX 并在 Jetson Orin 上做到目标推理频率</li>
+<li>能设计一份”安全包络”清单：哪些异常必须立即停机、哪些只需降级</li>
+<li>能定义一个”上线门槛”——而不是”演示效果好就发”</li>
+<li>能搭一条最小数据闭环：真机日志 → 标注 → 再训练 → 影子模式回归</li>
+</ul>
+<p>推荐并行实践的开源项目：</p>
+<ul>
+<li><strong>推理运行时</strong>：ONNX Runtime、TensorRT、OpenVINO、TVM、TFLite、MNN</li>
+<li><strong>边缘加速参考</strong>：NVIDIA Jetson Inference、Isaac ROS、TensorRT-LLM（若用 VLA）</li>
+<li><strong>可观测性</strong>：Prometheus + Grafana、Loki、OpenTelemetry</li>
+<li><strong>数据 &#x2F; 日志</strong>：rosbag2、Foxglove Data Platform、rerun.io</li>
+<li><strong>MLOps 侧</strong>：MLflow、Weights &amp; Biases、DVC（数据集版本）</li>
+</ul>
+<p>简历视角：能讲清楚一条”训练 → 导出 → 部署 → 上线监控 → 回流再训练”完整链路的人非常稀缺。这一层做出哪怕一个小例子，分量远超再多一篇 paper 复现。</p>
+<hr>
+<h2 id="十六、前沿动态：2026-05-时点"><a href="#十六、前沿动态：2026-05-时点" class="headerlink" title="十六、前沿动态：2026-05 时点"></a>十六、前沿动态：2026-05 时点</h2><blockquote>
+<p>这一节用作时间锚点，方便后续按季度或半年更新。下面列的是 2024-2025 起在工程社群讨论度较高的方向；具体版本号、价格、许可证请以官方资料为准。本节预计每 3-6 个月刷新一次，下次更新对照本文 <code>updated</code> 字段判断。</p>
+</blockquote>
+<h3 id="整机与商业进展"><a href="#整机与商业进展" class="headerlink" title="整机与商业进展"></a>整机与商业进展</h3><ul>
+<li><strong>人形小批量化</strong>：Unitree G1（2024 中发布，首次把人形价位拉进万美元区间）、Booster T1、Fourier GR-1 系在 2024-2025 持续迭代</li>
+<li><strong>北美商业化叙事</strong>：Figure 02、Apptronik Apollo、1X NEO 把”工厂 &#x2F; 家居上岗”作为主线；Tesla Optimus 系、Sanctuary Phoenix demo 节奏快，但量产口径仍以官方为准</li>
+<li><strong>四足继续下沉</strong>：Unitree Go2 系是研究社群最常见平台；ANYmal D、宇树 B2 主攻工业巡检</li>
+<li><strong>机械臂民用化</strong>：LeRobot 生态下的 SO-100 &#x2F; Koch arm 把”千元跑模仿学习”做成现实</li>
+</ul>
+<h3 id="仿真栈"><a href="#仿真栈" class="headerlink" title="仿真栈"></a>仿真栈</h3><ul>
+<li><strong>Isaac Lab</strong> 在 2024 起取代旧版 Isaac Gym，整合 legged_gym 一脉，是腿式 RL 训练主力</li>
+<li><strong>Genesis</strong>（2024 末开源）主打训练速度，社区在 2025 上升期</li>
+<li><strong>Newton</strong>（NVIDIA × Disney × Google DeepMind 合作的 GPU 可微物理方向）值得长期跟进</li>
+</ul>
+<h3 id="机器人学习栈"><a href="#机器人学习栈" class="headerlink" title="机器人学习栈"></a>机器人学习栈</h3><ul>
+<li><strong>公开 VLA 模型</strong>：OpenVLA、Octo、π0 是当前讨论度最高的三条线</li>
+<li><strong>闭源 &#x2F; Demo 路线</strong>：Figure Helix（2025 公布）等以演示形式释放进展</li>
+<li><strong>数据集</strong>：Open X-Embodiment 持续聚合多家实验室数据；Mobile ALOHA、HumanPlus、OmniH2O 推动人形遥操数据格式</li>
+<li><strong>模仿学习落地</strong>：Diffusion Policy、ACT 已被多个工业团队复现并改造</li>
+</ul>
+<h3 id="工具链"><a href="#工具链" class="headerlink" title="工具链"></a>工具链</h3><ul>
+<li><strong>rerun.io</strong> 在研究社群普及，是 RViz 的现代替代</li>
+<li><strong>Foxglove</strong> 在工程团队侧扩散</li>
+<li><strong>HuggingFace LeRobot</strong> 把数据、模型、教程封进一个 pip 包，是当前低门槛入口</li>
+</ul>
+<h3 id="持续追踪建议"><a href="#持续追踪建议" class="headerlink" title="持续追踪建议"></a>持续追踪建议</h3><ul>
+<li>VLA &#x2F; 世界模型方向：按月看 arXiv 与 HuggingFace 模型榜</li>
+<li>仿真栈与 Isaac Lab：按季度看版本与示例</li>
+<li>硬件平台：按半年看官方价格与开发者套件</li>
+</ul>
+<hr>
+<h2 id="十七、三条典型成长支路"><a href="#十七、三条典型成长支路" class="headerlink" title="十七、三条典型成长支路"></a>十七、三条典型成长支路</h2><p>如果不打算“全栈通吃”，可以选下面一条作为主线，其余作为支持知识。</p>
+<p><img src="/images/robotics-roadmap/growth-paths.png" alt="三条典型成长支路对照图"></p>
+<h3 id="A-感知-SLAM-方向"><a href="#A-感知-SLAM-方向" class="headerlink" title="A. 感知 &#x2F; SLAM 方向"></a>A. 感知 &#x2F; SLAM 方向</h3><ul>
+<li>主依赖层：数学基础 → 空间表示 → 概率与滤波 → 感知与三维理解 → 中间件</li>
+<li>重点项目：ORB-SLAM3、VINS-Fusion、FAST-LIO2、Open3D、Kalibr、SAM 2</li>
+<li>适配岗位：SLAM 工程师、感知工程师、AR &#x2F; VR 与无人机感知岗</li>
+</ul>
+<h3 id="B-控制-动力学-运动规划方向"><a href="#B-控制-动力学-运动规划方向" class="headerlink" title="B. 控制 &#x2F; 动力学 &#x2F; 运动规划方向"></a>B. 控制 &#x2F; 动力学 &#x2F; 运动规划方向</h3><ul>
+<li>主依赖层：数学基础 → 空间表示 → 运动学 → 概率与滤波 → 机械臂 &#x2F; 四足 &#x2F; 人形控制 → 仿真</li>
+<li>重点项目：Pinocchio、Drake、Crocoddyl、OCS2、ros2_control、legged_gym</li>
+<li>适配岗位：四足 &#x2F; 人形控制工程师、机器人算法工程师、机械臂运动规划岗</li>
+</ul>
+<h3 id="C-机器人学习-RL-VLA-方向"><a href="#C-机器人学习-RL-VLA-方向" class="headerlink" title="C. 机器人学习 &#x2F; RL &#x2F; VLA 方向"></a>C. 机器人学习 &#x2F; RL &#x2F; VLA 方向</h3><ul>
+<li>主依赖层：数学基础 → 运动学 → 仿真 → 机器人学习 → 部署</li>
+<li>重点项目：Isaac Lab、legged_gym、Diffusion Policy、LeRobot、OpenVLA、Octo</li>
+<li>适配岗位：机器人学习算法工程师、具身大模型方向、灵巧操作算法工程师</li>
+</ul>
+<p>三条路并不排他——但单段时间内只押注一条，迭代速度会更快。</p>
+<hr>
+<h2 id="十八、推荐阅读顺序"><a href="#十八、推荐阅读顺序" class="headerlink" title="十八、推荐阅读顺序"></a>十八、推荐阅读顺序</h2><p>如果从零开始，建议按下面顺序读：</p>
 <ol>
 <li>具身智能中的数学基础</li>
 <li>具身智能中的坐标系、旋转矩阵与四元数</li>
 <li>机器人运动学入门：从二连杆到六轴机械臂</li>
 <li>具身智能中的概率与滤波：IMU、编码器和卡尔曼滤波</li>
-<li>机械臂控制基础：轨迹规划、PID与末端控制</li>
+<li>机械臂控制基础：轨迹规划、PID 与末端控制</li>
 <li>具身智能中的接触与抓取：从机械臂到灵巧手</li>
 <li>四足机器人控制基础：足端轨迹、质心与稳定性</li>
-<li>人形机器人控制基础：质心、ZMP与步态</li>
-<li>人形机器人全身控制：任务、约束与QP</li>
-<li>人形机器人中的全身控制实现：从动力学方程到QP求解</li>
+<li>人形机器人控制基础：质心、ZMP 与步态</li>
+<li>人形机器人全身控制：任务、约束与 QP</li>
+<li>人形机器人中的全身控制实现：从动力学方程到 QP 求解</li>
 <li>人形机器人中的接触力分配与支撑约束</li>
 <li>人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</li>
 </ol>
@@ -483,8 +794,8 @@
 <p>如果目标是四足，可以重点读第 1、2、3、4、7 篇。</p>
 <p>如果目标是人形，建议不要跳过第 1 到第 4 篇，因为后面所有全身控制和状态估计都依赖这些基础。</p>
 <hr>
-<h2 id="十一、后续扩展方向"><a href="#十一、后续扩展方向" class="headerlink" title="十一、后续扩展方向"></a>十一、后续扩展方向</h2><p>这条路线后续可以继续往几个方向扩展。</p>
-<h3 id="11-1-硬件线"><a href="#11-1-硬件线" class="headerlink" title="11.1 硬件线"></a>11.1 硬件线</h3><ul>
+<h2 id="十九、后续扩展方向"><a href="#十九、后续扩展方向" class="headerlink" title="十九、后续扩展方向"></a>十九、后续扩展方向</h2><p>这条路线后续可以继续往几个方向扩展。</p>
+<h3 id="19-1-硬件线"><a href="#19-1-硬件线" class="headerlink" title="19.1 硬件线"></a>19.1 硬件线</h3><ul>
 <li>电机选型</li>
 <li>减速器</li>
 <li>编码器</li>
@@ -494,7 +805,7 @@
 <li>足底传感器</li>
 <li>灵巧手触觉</li>
 </ul>
-<h3 id="11-2-仿真线"><a href="#11-2-仿真线" class="headerlink" title="11.2 仿真线"></a>11.2 仿真线</h3><ul>
+<h3 id="19-2-仿真线"><a href="#19-2-仿真线" class="headerlink" title="19.2 仿真线"></a>19.2 仿真线</h3><ul>
 <li>URDF &#x2F; MJCF 建模</li>
 <li>MuJoCo</li>
 <li>Isaac Sim</li>
@@ -502,7 +813,7 @@
 <li>接触参数标定</li>
 <li>传感器噪声建模</li>
 </ul>
-<h3 id="11-3-控制线"><a href="#11-3-控制线" class="headerlink" title="11.3 控制线"></a>11.3 控制线</h3><ul>
+<h3 id="19-3-控制线"><a href="#19-3-控制线" class="headerlink" title="19.3 控制线"></a>19.3 控制线</h3><ul>
 <li>MPC</li>
 <li>QP 全身控制</li>
 <li>阻抗控制</li>
@@ -510,7 +821,7 @@
 <li>力矩控制</li>
 <li>扰动恢复</li>
 </ul>
-<h3 id="11-4-感知与具身智能线"><a href="#11-4-感知与具身智能线" class="headerlink" title="11.4 感知与具身智能线"></a>11.4 感知与具身智能线</h3><ul>
+<h3 id="19-4-感知与具身智能线"><a href="#19-4-感知与具身智能线" class="headerlink" title="19.4 感知与具身智能线"></a>19.4 感知与具身智能线</h3><ul>
 <li>视觉定位</li>
 <li>目标检测</li>
 <li>6D 位姿估计</li>
@@ -519,7 +830,7 @@
 <li>强化学习</li>
 <li>语言模型到动作接口</li>
 </ul>
-<h3 id="11-5-操作线"><a href="#11-5-操作线" class="headerlink" title="11.5 操作线"></a>11.5 操作线</h3><ul>
+<h3 id="19-5-操作线"><a href="#19-5-操作线" class="headerlink" title="19.5 操作线"></a>19.5 操作线</h3><ul>
 <li>视觉抓取</li>
 <li>接触反馈</li>
 <li>灵巧手</li>
@@ -528,16 +839,44 @@
 <li>装配任务</li>
 </ul>
 <hr>
-<h2 id="十二、总结"><a href="#十二、总结" class="headerlink" title="十二、总结"></a>十二、总结</h2><p>具身智能机器人全栈开发，最怕学习顺序断层。</p>
+<h2 id="二十、后续文章计划"><a href="#二十、后续文章计划" class="headerlink" title="二十、后续文章计划"></a>二十、后续文章计划</h2><blockquote>
+<p>路线图把每一层的话题铺开了，但许多横向章节本系列尚未单独成文。下面是后续会陆续展开的题目；正式发布后会在本节把题目从“待写”改成对应的 post_link 链接。</p>
+</blockquote>
+<p>已成文的 13 篇姊妹文集中在第 1-8 层与人形子主题，详见上一节“推荐阅读顺序”。</p>
+<h3 id="待写：补完路线图的横向章节"><a href="#待写：补完路线图的横向章节" class="headerlink" title="待写：补完路线图的横向章节"></a>待写：补完路线图的横向章节</h3><ul>
+<li>《具身智能中的感知与三维理解：相机、SLAM 与 3D 表示》——对应“感知与三维理解”层</li>
+<li>《机器人仿真实战：从 URDF 到 Isaac Lab 并行训练》——对应仿真平台层</li>
+<li>《ROS 2 工程指南：节点、TF、控制环与 rosbag 调试》——对应中间件层</li>
+<li>《机器人强化学习入门：PPO、legged_gym 与 Sim2Real》——对应机器人学习层 A &#x2F; B</li>
+<li>《机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot》——对应机器人学习层 C</li>
+<li>《VLA 大模型导论：OpenVLA、Octo 与 π0 怎么看》——对应机器人学习层 D</li>
+<li>《机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control》——对应硬件层</li>
+<li>《机器人部署与上线：ONNX、TensorRT、安全包络与影子模式》——对应部署层</li>
+</ul>
+<h3 id="待写：纵深主题"><a href="#待写：纵深主题" class="headerlink" title="待写：纵深主题"></a>待写：纵深主题</h3><p>按现有层的下钻方向：</p>
+<ul>
+<li>《MPC 在腿式机器人里的工程实现》——四足 &#x2F; 人形控制纵深</li>
+<li>《机器人轨迹优化与可微仿真》——Drake &#x2F; Genesis &#x2F; 可微物理纵深</li>
+<li>《灵巧手控制与触觉感知》——接触与操作纵深</li>
+<li>《Mobile ALOHA 与 HumanPlus：移动操作 + 人形示教数据全流程》——机器人学习纵深</li>
+<li>《世界模型与机器人：DreamerV3 到 Genie 系》——前沿纵深</li>
+</ul>
+<p>任何题目你觉得优先级要调整、或想新加的，直接告诉我，我可以插进来或调整顺序。</p>
+<hr>
+<h2 id="二十一、总结"><a href="#二十一、总结" class="headerlink" title="二十一、总结"></a>二十一、总结</h2><p>机器人与具身智能全栈开发，最怕学习顺序断层。</p>
 <p>如果只看上层模型，很容易忽略硬件、控制和状态估计。</p>
 <p>如果只看底层驱动，又很难把机器人推向复杂任务。</p>
 <p>这套路线的核心目标，是把这些层串起来：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">数学基础</span><br><span class="line">  -&gt; 空间表示</span><br><span class="line">  -&gt; 运动学</span><br><span class="line">  -&gt; 状态估计</span><br><span class="line">  -&gt; 控制闭环</span><br><span class="line">  -&gt; 接触操作</span><br><span class="line">  -&gt; 四足/人形全身系统</span><br></pre></td></tr></table></figure>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">数学基础</span><br><span class="line">  -&gt; 空间表示</span><br><span class="line">  -&gt; 运动学 / 动力学</span><br><span class="line">  -&gt; 概率、滤波与状态估计</span><br><span class="line">  -&gt; 感知与三维理解</span><br><span class="line">  -&gt; 经典控制（机械臂 / 接触 / 四足 / 人形全身）</span><br><span class="line">  -&gt; 仿真平台</span><br><span class="line">  -&gt; ROS 中间件</span><br><span class="line">  -&gt; 强化学习 / 模仿学习 / VLA</span><br><span class="line">  -&gt; 硬件与系统集成</span><br><span class="line">  -&gt; 部署、安全与产品化</span><br></pre></td></tr></table></figure>
 
-<p>真正能工作的机器人系统，不是某一个模块单独强，而是每一层都能把上一层的结果可靠地接住。</p>
-<p>可以压缩成一句话：</p>
-<p><strong>具身智能不是把大模型接到电机上，而是把感知、状态、控制、接触和硬件约束逐层闭环，最终让智能拥有一个可计算、可控制、可恢复的身体。</strong></p>
-<link rel="stylesheet" href="/css/spoiler.css" type="text/css"><script src="/js/spoiler.js" type="text/javascript" async></script></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://LJS515.github.io/">YiQiu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://ljs515.github.io/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/">https://ljs515.github.io/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://ljs515.github.io" target="_blank">YiQiuのblog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD/">具身智能</a><a class="post-meta__tags" href="/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA/">机器人</a><a class="post-meta__tags" href="/tags/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA/">人形机器人</a><a class="post-meta__tags" href="/tags/%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91/">全栈开发</a><a class="post-meta__tags" href="/tags/%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/">学习路线</a></div><div class="post-share"><div class="social-share" data-image="/img/04.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>感谢您的支持</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechat.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wechat.jpg" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpg" alt="alipay"/></a><div class="post-qr-code-desc">alipay</div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复"><img class="cover" src="/img/04.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E5%8A%A8%E5%8A%9B%E5%AD%A6%E6%96%B9%E7%A8%8B%E5%88%B0QP%E6%B1%82%E8%A7%A3/" title="人形机器人中的全身控制实现：从动力学方程到QP求解"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人中的全身控制实现：从动力学方程到QP求解</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F/" title="人形机器人中的接触力分配与支撑约束"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人中的接触力分配与支撑约束</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%EF%BC%9A%E4%BB%BB%E5%8A%A1%E3%80%81%E7%BA%A6%E6%9D%9F%E4%B8%8EQP/" title="人形机器人全身控制：任务、约束与QP"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人全身控制：任务、约束与QP</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/06/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%B4%A8%E5%BF%83%E3%80%81ZMP%E4%B8%8E%E6%AD%A5%E6%80%81/" title="人形机器人控制基础：质心、ZMP与步态"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-06</div><div class="info-item-2">人形机器人控制基础：质心、ZMP与步态</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/06/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80/" title="具身智能中的数学基础"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-06</div><div class="info-item-2">具身智能中的数学基础</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="author-info-name">YiQiu</div><div class="author-info-description">专注于嵌入式技术研究 | ROS学习之路 | 深度学习&人工智能 | 算法研究</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">29</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" href="https://LJS515.github.io/"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/LJS515" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:3435583503@qq.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><style>
+<p>每往下一层，问题就更具体、对工程能力的要求就更明确。本文不要求所有人都覆盖全部 14 层，但建议每条主线（感知 &#x2F; 控制 &#x2F; 学习）都至少做出一份能演示、能复盘的成果。</p>
+<p><strong>机器人不是把大模型接到电机上，而是把数学、感知、状态、控制、接触、学习与硬件约束逐层闭环，最终让智能拥有一个可计算、可控制、可恢复、可交付的身体。</strong></p>
+<hr>
+<h2 id="系列导航"><a href="#系列导航" class="headerlink" title="系列导航"></a>系列导航</h2><ul>
+<li>下一篇：<a href="/2026/04/06/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80/" title="具身智能中的数学基础">具身智能中的数学基础</a></li>
+<li>本篇是机器人与具身智能全栈开发系列的总路线图。</li>
+</ul>
+<link rel="stylesheet" href="/css/spoiler.css" type="text/css"><script src="/js/spoiler.js" type="text/javascript" async></script></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://LJS515.github.io/">YiQiu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://ljs515.github.io/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/">https://ljs515.github.io/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://ljs515.github.io" target="_blank">YiQiuのblog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD/">具身智能</a><a class="post-meta__tags" href="/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA/">机器人</a><a class="post-meta__tags" href="/tags/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA/">人形机器人</a><a class="post-meta__tags" href="/tags/%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91/">全栈开发</a><a class="post-meta__tags" href="/tags/%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/">学习路线</a><a class="post-meta__tags" href="/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%AD%A6%E4%B9%A0/">机器人学习</a><a class="post-meta__tags" href="/tags/%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0/">强化学习</a><a class="post-meta__tags" href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/">开源项目</a></div><div class="post-share"><div class="social-share" data-image="/img/04.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>感谢您的支持</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechat.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wechat.jpg" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpg" alt="alipay"/></a><div class="post-qr-code-desc">alipay</div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复"><img class="cover" src="/img/04.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E5%8A%A8%E5%8A%9B%E5%AD%A6%E6%96%B9%E7%A8%8B%E5%88%B0QP%E6%B1%82%E8%A7%A3/" title="人形机器人中的全身控制实现：从动力学方程到 QP 求解"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人中的全身控制实现：从动力学方程到 QP 求解</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%EF%BC%9A%E4%BB%BB%E5%8A%A1%E3%80%81%E7%BA%A6%E6%9D%9F%E4%B8%8EQP/" title="人形机器人全身控制：任务、约束与 QP"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人全身控制：任务、约束与 QP</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/06/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%B4%A8%E5%BF%83%E3%80%81ZMP%E4%B8%8E%E6%AD%A5%E6%80%81/" title="人形机器人控制基础：质心、ZMP 与步态"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-06</div><div class="info-item-2">人形机器人控制基础：质心、ZMP 与步态</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F/" title="人形机器人中的接触力分配与支撑约束"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人中的接触力分配与支撑约束</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/06/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80/" title="具身智能中的数学基础"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-06</div><div class="info-item-2">具身智能中的数学基础</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="author-info-name">YiQiu</div><div class="author-info-description">专注于嵌入式技术研究 | ROS学习之路 | 深度学习&人工智能 | 算法研究</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">32</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" href="https://LJS515.github.io/"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/LJS515" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:3435583503@qq.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><style>
 .announcement-card {
     --main-color: #ff00ff;
     --secondary-color: #00ffff;
@@ -580,7 +919,7 @@
         <p>🌟 <strong>加入我们，一起探索机器人的奥秘，提升AI实战能力，共同创造更美好的人工智能！</strong></p>
     </div>
 </div>
-</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6"><span class="toc-number">1.</span> <span class="toc-text">具身智能机器人全栈开发路线图：从数学基础到人形全身控制</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E6%80%BB%E7%9B%AE%E6%A0%87%EF%BC%9A%E5%81%9A%E8%83%BD%E7%9C%9F%E6%AD%A3%E5%B7%A5%E4%BD%9C%E7%9A%84%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%B3%BB%E7%BB%9F"><span class="toc-number">1.1.</span> <span class="toc-text">一、总目标：做能真正工作的机器人系统</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E7%AC%AC%E4%B8%80%E5%B1%82%EF%BC%9A%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80"><span class="toc-number">1.2.</span> <span class="toc-text">二、第一层：数学基础</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E7%AC%AC%E4%BA%8C%E5%B1%82%EF%BC%9A%E7%A9%BA%E9%97%B4%E8%A1%A8%E7%A4%BA"><span class="toc-number">1.3.</span> <span class="toc-text">三、第二层：空间表示</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E7%AC%AC%E4%B8%89%E5%B1%82%EF%BC%9A%E8%BF%90%E5%8A%A8%E5%AD%A6"><span class="toc-number">1.4.</span> <span class="toc-text">四、第三层：运动学</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E7%AC%AC%E5%9B%9B%E5%B1%82%EF%BC%9A%E6%A6%82%E7%8E%87%E3%80%81%E6%BB%A4%E6%B3%A2%E4%B8%8E%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1"><span class="toc-number">1.5.</span> <span class="toc-text">五、第四层：概率、滤波与状态估计</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E7%AC%AC%E4%BA%94%E5%B1%82%EF%BC%9A%E6%9C%BA%E6%A2%B0%E8%87%82%E6%8E%A7%E5%88%B6"><span class="toc-number">1.6.</span> <span class="toc-text">六、第五层：机械臂控制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E7%AC%AC%E5%85%AD%E5%B1%82%EF%BC%9A%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%8A%93%E5%8F%96"><span class="toc-number">1.7.</span> <span class="toc-text">七、第六层：接触与抓取</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E7%AC%AC%E4%B8%83%E5%B1%82%EF%BC%9A%E5%9B%9B%E8%B6%B3%E6%8E%A7%E5%88%B6"><span class="toc-number">1.8.</span> <span class="toc-text">八、第七层：四足控制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E7%AC%AC%E5%85%AB%E5%B1%82%EF%BC%9A%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8E%A7%E5%88%B6"><span class="toc-number">1.9.</span> <span class="toc-text">九、第八层：人形机器人控制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-%E8%B4%A8%E5%BF%83%E3%80%81ZMP-%E4%B8%8E%E6%AD%A5%E6%80%81"><span class="toc-number">1.9.1.</span> <span class="toc-text">9.1 质心、ZMP 与步态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%E6%A1%86%E6%9E%B6"><span class="toc-number">1.9.2.</span> <span class="toc-text">9.2 全身控制框架</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-3-%E4%BB%8E%E5%8A%A8%E5%8A%9B%E5%AD%A6%E6%96%B9%E7%A8%8B%E5%88%B0-QP"><span class="toc-number">1.9.3.</span> <span class="toc-text">9.3 从动力学方程到 QP</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-4-%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F"><span class="toc-number">1.9.4.</span> <span class="toc-text">9.4 接触力分配与支撑约束</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-5-%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%E9%97%AD%E7%8E%AF"><span class="toc-number">1.9.5.</span> <span class="toc-text">9.5 状态估计闭环</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E6%8E%A8%E8%8D%90%E9%98%85%E8%AF%BB%E9%A1%BA%E5%BA%8F"><span class="toc-number">1.10.</span> <span class="toc-text">十、推荐阅读顺序</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E5%90%8E%E7%BB%AD%E6%89%A9%E5%B1%95%E6%96%B9%E5%90%91"><span class="toc-number">1.11.</span> <span class="toc-text">十一、后续扩展方向</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-%E7%A1%AC%E4%BB%B6%E7%BA%BF"><span class="toc-number">1.11.1.</span> <span class="toc-text">11.1 硬件线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-%E4%BB%BF%E7%9C%9F%E7%BA%BF"><span class="toc-number">1.11.2.</span> <span class="toc-text">11.2 仿真线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-3-%E6%8E%A7%E5%88%B6%E7%BA%BF"><span class="toc-number">1.11.3.</span> <span class="toc-text">11.3 控制线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-4-%E6%84%9F%E7%9F%A5%E4%B8%8E%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E7%BA%BF"><span class="toc-number">1.11.4.</span> <span class="toc-text">11.4 感知与具身智能线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-5-%E6%93%8D%E4%BD%9C%E7%BA%BF"><span class="toc-number">1.11.5.</span> <span class="toc-text">11.5 操作线</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81%E6%80%BB%E7%BB%93"><span class="toc-number">1.12.</span> <span class="toc-text">十二、总结</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="具身智能机器人全栈开发路线图：从数学基础到人形全身控制"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="具身智能机器人全栈开发路线图：从数学基础到人形全身控制"/></a><div class="content"><a class="title" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="具身智能机器人全栈开发路线图：从数学基础到人形全身控制">具身智能机器人全栈开发路线图：从数学基础到人形全身控制</a><time datetime="2026-04-06T17:30:00.000Z" title="发表于 2026-04-07 01:30:00">2026-04-07</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复"/></a><div class="content"><a class="title" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</a><time datetime="2026-04-06T17:05:00.000Z" title="发表于 2026-04-07 01:05:00">2026-04-07</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F/" title="人形机器人中的接触力分配与支撑约束"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="人形机器人中的接触力分配与支撑约束"/></a><div class="content"><a class="title" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F/" title="人形机器人中的接触力分配与支撑约束">人形机器人中的接触力分配与支撑约束</a><time datetime="2026-04-06T16:45:00.000Z" title="发表于 2026-04-07 00:45:00">2026-04-07</time></div></div></div></div></div></div></main><footer id="footer" style="background-color: rgba(45, 10, 61, 0.2);"><div class="footer-other"><div class="footer-copyright"></div><div class="footer_custom_text"><style>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%8E%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%AD%A6%E4%B9%A0%E4%B8%8E%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6"><span class="toc-number">1.</span> <span class="toc-text">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E6%80%BB%E7%9B%AE%E6%A0%87%EF%BC%9A%E5%81%9A%E8%83%BD%E7%9C%9F%E6%AD%A3%E5%B7%A5%E4%BD%9C%E7%9A%84%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%B3%BB%E7%BB%9F"><span class="toc-number">1.1.</span> <span class="toc-text">一、总目标：做能真正工作的机器人系统</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E7%AC%AC%E4%B8%80%E5%B1%82%EF%BC%9A%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80"><span class="toc-number">1.2.</span> <span class="toc-text">二、第一层：数学基础</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E7%AC%AC%E4%BA%8C%E5%B1%82%EF%BC%9A%E7%A9%BA%E9%97%B4%E8%A1%A8%E7%A4%BA"><span class="toc-number">1.3.</span> <span class="toc-text">三、第二层：空间表示</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E7%AC%AC%E4%B8%89%E5%B1%82%EF%BC%9A%E8%BF%90%E5%8A%A8%E5%AD%A6"><span class="toc-number">1.4.</span> <span class="toc-text">四、第三层：运动学</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E7%AC%AC%E5%9B%9B%E5%B1%82%EF%BC%9A%E6%A6%82%E7%8E%87%E3%80%81%E6%BB%A4%E6%B3%A2%E4%B8%8E%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1"><span class="toc-number">1.5.</span> <span class="toc-text">五、第四层：概率、滤波与状态估计</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E7%AC%AC%E4%BA%94%E5%B1%82%EF%BC%9A%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%88%E8%A7%86%E8%A7%89-SLAM-3D%EF%BC%89"><span class="toc-number">1.6.</span> <span class="toc-text">六、第五层：感知与三维理解（视觉 &#x2F; SLAM &#x2F; 3D）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E7%AC%AC%E5%85%AD%E5%B1%82%EF%BC%9A%E6%9C%BA%E6%A2%B0%E8%87%82%E6%8E%A7%E5%88%B6"><span class="toc-number">1.7.</span> <span class="toc-text">七、第六层：机械臂控制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E7%AC%AC%E4%B8%83%E5%B1%82%EF%BC%9A%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%8A%93%E5%8F%96"><span class="toc-number">1.8.</span> <span class="toc-text">八、第七层：接触与抓取</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E7%AC%AC%E5%85%AB%E5%B1%82%EF%BC%9A%E5%9B%9B%E8%B6%B3%E6%8E%A7%E5%88%B6"><span class="toc-number">1.9.</span> <span class="toc-text">九、第八层：四足控制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E7%AC%AC%E4%B9%9D%E5%B1%82%EF%BC%9A%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8E%A7%E5%88%B6"><span class="toc-number">1.10.</span> <span class="toc-text">十、第九层：人形机器人控制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-%E8%B4%A8%E5%BF%83%E3%80%81ZMP-%E4%B8%8E%E6%AD%A5%E6%80%81"><span class="toc-number">1.10.1.</span> <span class="toc-text">10.1 质心、ZMP 与步态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%E6%A1%86%E6%9E%B6"><span class="toc-number">1.10.2.</span> <span class="toc-text">10.2 全身控制框架</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-3-%E4%BB%8E%E5%8A%A8%E5%8A%9B%E5%AD%A6%E6%96%B9%E7%A8%8B%E5%88%B0-QP"><span class="toc-number">1.10.3.</span> <span class="toc-text">10.3 从动力学方程到 QP</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-4-%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F"><span class="toc-number">1.10.4.</span> <span class="toc-text">10.4 接触力分配与支撑约束</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-5-%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%E9%97%AD%E7%8E%AF"><span class="toc-number">1.10.5.</span> <span class="toc-text">10.5 状态估计闭环</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E7%AC%AC%E5%8D%81%E5%B1%82%EF%BC%9A%E4%BB%BF%E7%9C%9F%E5%B9%B3%E5%8F%B0%E2%80%94%E2%80%94%E4%BB%8E-URDF-%E5%88%B0-GPU-%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83"><span class="toc-number">1.11.</span> <span class="toc-text">十一、第十层：仿真平台——从 URDF 到 GPU 并行训练</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81%E7%AC%AC%E5%8D%81%E4%B8%80%E5%B1%82%EF%BC%9A%E4%B8%AD%E9%97%B4%E4%BB%B6%E2%80%94%E2%80%94ROS-2%E3%80%81DDS-%E4%B8%8E%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B"><span class="toc-number">1.12.</span> <span class="toc-text">十二、第十一层：中间件——ROS 2、DDS 与机器人系统工程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%89%E3%80%81%E7%AC%AC%E5%8D%81%E4%BA%8C%E5%B1%82%EF%BC%9A%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%AD%A6%E4%B9%A0%E2%80%94%E2%80%94%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E3%80%81%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E4%B8%8E-VLA"><span class="toc-number">1.13.</span> <span class="toc-text">十三、第十二层：机器人学习——强化学习、模仿学习与 VLA</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#A-%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E5%9F%BA%E7%A1%80"><span class="toc-number">1.13.1.</span> <span class="toc-text">A. 强化学习基础</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#B-%E6%9C%BA%E5%99%A8%E4%BA%BA-RL-%E8%AE%AD%E7%BB%83%E6%A0%88%EF%BC%88GPU-%E5%B9%B6%E8%A1%8C%EF%BC%89"><span class="toc-number">1.13.2.</span> <span class="toc-text">B. 机器人 RL 训练栈（GPU 并行）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#C-%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E4%B8%8E%E6%95%B0%E6%8D%AE%E9%A9%B1%E5%8A%A8%E6%93%8D%E4%BD%9C"><span class="toc-number">1.13.3.</span> <span class="toc-text">C. 模仿学习与数据驱动操作</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#D-%E8%A7%86%E8%A7%89-%E8%AF%AD%E8%A8%80-%E5%8A%A8%E4%BD%9C%EF%BC%88VLA%EF%BC%89%E4%B8%8E%E4%B8%96%E7%95%8C%E6%A8%A1%E5%9E%8B"><span class="toc-number">1.13.4.</span> <span class="toc-text">D. 视觉-语言-动作（VLA）与世界模型</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E5%9B%9B%E3%80%81%E7%AC%AC%E5%8D%81%E4%B8%89%E5%B1%82%EF%BC%9A%E7%A1%AC%E4%BB%B6%E4%B8%8E%E7%B3%BB%E7%BB%9F%E9%9B%86%E6%88%90%E2%80%94%E2%80%94%E7%94%B5%E6%9C%BA%E3%80%81%E4%BC%A0%E6%84%9F%E5%99%A8%E3%80%81%E6%80%BB%E7%BA%BF%E4%B8%8E%E6%95%B4%E6%9C%BA%E5%B9%B3%E5%8F%B0"><span class="toc-number">1.14.</span> <span class="toc-text">十四、第十三层：硬件与系统集成——电机、传感器、总线与整机平台</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%94%E3%80%81%E7%AC%AC%E5%8D%81%E5%9B%9B%E5%B1%82%EF%BC%9A%E9%83%A8%E7%BD%B2%E3%80%81%E5%AE%89%E5%85%A8%E4%B8%8E%E4%BA%A7%E5%93%81%E5%8C%96%E2%80%94%E2%80%94%E4%BB%8E%E8%83%BD%E8%B7%91%E5%88%B0%E8%83%BD%E4%BA%A4%E4%BB%98"><span class="toc-number">1.15.</span> <span class="toc-text">十五、第十四层：部署、安全与产品化——从能跑到能交付</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E5%85%AD%E3%80%81%E5%89%8D%E6%B2%BF%E5%8A%A8%E6%80%81%EF%BC%9A2026-05-%E6%97%B6%E7%82%B9"><span class="toc-number">1.16.</span> <span class="toc-text">十六、前沿动态：2026-05 时点</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%B4%E6%9C%BA%E4%B8%8E%E5%95%86%E4%B8%9A%E8%BF%9B%E5%B1%95"><span class="toc-number">1.16.1.</span> <span class="toc-text">整机与商业进展</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%BF%E7%9C%9F%E6%A0%88"><span class="toc-number">1.16.2.</span> <span class="toc-text">仿真栈</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%AD%A6%E4%B9%A0%E6%A0%88"><span class="toc-number">1.16.3.</span> <span class="toc-text">机器人学习栈</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B7%A5%E5%85%B7%E9%93%BE"><span class="toc-number">1.16.4.</span> <span class="toc-text">工具链</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8C%81%E7%BB%AD%E8%BF%BD%E8%B8%AA%E5%BB%BA%E8%AE%AE"><span class="toc-number">1.16.5.</span> <span class="toc-text">持续追踪建议</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%83%E3%80%81%E4%B8%89%E6%9D%A1%E5%85%B8%E5%9E%8B%E6%88%90%E9%95%BF%E6%94%AF%E8%B7%AF"><span class="toc-number">1.17.</span> <span class="toc-text">十七、三条典型成长支路</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#A-%E6%84%9F%E7%9F%A5-SLAM-%E6%96%B9%E5%90%91"><span class="toc-number">1.17.1.</span> <span class="toc-text">A. 感知 &#x2F; SLAM 方向</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#B-%E6%8E%A7%E5%88%B6-%E5%8A%A8%E5%8A%9B%E5%AD%A6-%E8%BF%90%E5%8A%A8%E8%A7%84%E5%88%92%E6%96%B9%E5%90%91"><span class="toc-number">1.17.2.</span> <span class="toc-text">B. 控制 &#x2F; 动力学 &#x2F; 运动规划方向</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#C-%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%AD%A6%E4%B9%A0-RL-VLA-%E6%96%B9%E5%90%91"><span class="toc-number">1.17.3.</span> <span class="toc-text">C. 机器人学习 &#x2F; RL &#x2F; VLA 方向</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E5%85%AB%E3%80%81%E6%8E%A8%E8%8D%90%E9%98%85%E8%AF%BB%E9%A1%BA%E5%BA%8F"><span class="toc-number">1.18.</span> <span class="toc-text">十八、推荐阅读顺序</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B9%9D%E3%80%81%E5%90%8E%E7%BB%AD%E6%89%A9%E5%B1%95%E6%96%B9%E5%90%91"><span class="toc-number">1.19.</span> <span class="toc-text">十九、后续扩展方向</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#19-1-%E7%A1%AC%E4%BB%B6%E7%BA%BF"><span class="toc-number">1.19.1.</span> <span class="toc-text">19.1 硬件线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-2-%E4%BB%BF%E7%9C%9F%E7%BA%BF"><span class="toc-number">1.19.2.</span> <span class="toc-text">19.2 仿真线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-3-%E6%8E%A7%E5%88%B6%E7%BA%BF"><span class="toc-number">1.19.3.</span> <span class="toc-text">19.3 控制线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-4-%E6%84%9F%E7%9F%A5%E4%B8%8E%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E7%BA%BF"><span class="toc-number">1.19.4.</span> <span class="toc-text">19.4 感知与具身智能线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-5-%E6%93%8D%E4%BD%9C%E7%BA%BF"><span class="toc-number">1.19.5.</span> <span class="toc-text">19.5 操作线</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E5%8D%81%E3%80%81%E5%90%8E%E7%BB%AD%E6%96%87%E7%AB%A0%E8%AE%A1%E5%88%92"><span class="toc-number">1.20.</span> <span class="toc-text">二十、后续文章计划</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BE%85%E5%86%99%EF%BC%9A%E8%A1%A5%E5%AE%8C%E8%B7%AF%E7%BA%BF%E5%9B%BE%E7%9A%84%E6%A8%AA%E5%90%91%E7%AB%A0%E8%8A%82"><span class="toc-number">1.20.1.</span> <span class="toc-text">待写：补完路线图的横向章节</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BE%85%E5%86%99%EF%BC%9A%E7%BA%B5%E6%B7%B1%E4%B8%BB%E9%A2%98"><span class="toc-number">1.20.2.</span> <span class="toc-text">待写：纵深主题</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E5%8D%81%E4%B8%80%E3%80%81%E6%80%BB%E7%BB%93"><span class="toc-number">1.21.</span> <span class="toc-text">二十一、总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%B3%BB%E5%88%97%E5%AF%BC%E8%88%AA"><span class="toc-number">1.22.</span> <span class="toc-text">系列导航</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"/></a><div class="content"><a class="title" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</a><time datetime="2026-04-06T17:30:00.000Z" title="发表于 2026-04-07 01:30:00">2026-04-07</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复"/></a><div class="content"><a class="title" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</a><time datetime="2026-04-06T17:05:00.000Z" title="发表于 2026-04-07 01:05:00">2026-04-07</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F/" title="人形机器人中的接触力分配与支撑约束"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="人形机器人中的接触力分配与支撑约束"/></a><div class="content"><a class="title" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F/" title="人形机器人中的接触力分配与支撑约束">人形机器人中的接触力分配与支撑约束</a><time datetime="2026-04-06T16:45:00.000Z" title="发表于 2026-04-07 00:45:00">2026-04-07</time></div></div></div></div></div></div></main><footer id="footer" style="background-color: rgba(45, 10, 61, 0.2);"><div class="footer-other"><div class="footer-copyright"></div><div class="footer_custom_text"><style>
   .footer {
     text-align: center;
     position: relative;
@@ -725,6 +1064,26 @@
     }
   })
 })()</script><script async data-pjax src="/"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词..." type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.2"></script></div></div><!-- hexo injector body_end start --><script data-pjax>
+  function butterfly_categories_card_injector_config(){
+    // 检查容器是否存在
+    var parent_div_git = document.getElementById('recent-posts');
+    // 如果容器不存在，则动态创建
+    if (!parent_div_git) {
+      console.warn('butterfly_categories_card: 挂载容器不存在，正在动态创建...');
+      // 创建新容器（默认插入到页面主体顶部）
+      parent_div_git = document.createElement('div');
+      parent_div_git.id = 'recent-posts'; // 赋予配置的ID
+      document.querySelector('#page').prepend(parent_div_git); // 插入到 #content-inner 内
+    }
+    var item_html = '<style>li.categoryBar-list-item{width:32.3%;}.categoryBar-list{max-height: 950px;overflow:auto;}.categoryBar-list::-webkit-scrollbar{width:0!important}@media screen and (max-width: 650px){.categoryBar-list{max-height: 800px;}}</style><div class="recent-post-item" style="height:auto;width:100%;padding:0px;"><div id="categoryBar"><ul class="categoryBar-list"><li class="categoryBar-list-item" style="background:url(/img/11.png);"> <a class="categoryBar-list-link" onclick="pjax.loadUrl(&quot;/categories/具身智能教程/&quot;);" href="javascript:void(0);">具身智能教程</a><span class="categoryBar-list-count">13</span><span class="categoryBar-list-descr">1</span></li></ul></div></div>';
+    console.log('已挂载 butterfly_categories_card');
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+  }
+  // 路径匹配逻辑（使用 startsWith）
+  if (location.pathname.startsWith('/categories/') || '/categories/' === 'all') {
+    butterfly_categories_card_injector_config();
+  }
+  </script><script data-pjax>
   function butterfly_swiper_injector_config(){
     var parent_div_git = document.getElementById('recent-posts');
     var item_html = '<div class="recent-post-item" style="height: auto;width: 100%"><div class="blog-slider swiper-container-fade swiper-container-horizontal" id="swiper_container"><div class="blog-slider__wrp swiper-wrapper" style="transition-duration: 0ms;"></div><div class="blog-slider__pagination swiper-pagination-clickable swiper-pagination-bullets"></div></div></div>';
@@ -748,24 +1107,4 @@
   else if (epage === cpage){
     butterfly_swiper_injector_config();
   }
-  </script><script defer src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.js"></script><script defer data-pjax src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper_init.js"></script><script data-pjax>
-  function butterfly_categories_card_injector_config(){
-    // 检查容器是否存在
-    var parent_div_git = document.getElementById('recent-posts');
-    // 如果容器不存在，则动态创建
-    if (!parent_div_git) {
-      console.warn('butterfly_categories_card: 挂载容器不存在，正在动态创建...');
-      // 创建新容器（默认插入到页面主体顶部）
-      parent_div_git = document.createElement('div');
-      parent_div_git.id = 'recent-posts'; // 赋予配置的ID
-      document.querySelector('#page').prepend(parent_div_git); // 插入到 #content-inner 内
-    }
-    var item_html = '<style>li.categoryBar-list-item{width:32.3%;}.categoryBar-list{max-height: 950px;overflow:auto;}.categoryBar-list::-webkit-scrollbar{width:0!important}@media screen and (max-width: 650px){.categoryBar-list{max-height: 800px;}}</style><div class="recent-post-item" style="height:auto;width:100%;padding:0px;"><div id="categoryBar"><ul class="categoryBar-list"><li class="categoryBar-list-item" style="background:url(/img/11.png);"> <a class="categoryBar-list-link" onclick="pjax.loadUrl(&quot;/categories/具身智能教程/&quot;);" href="javascript:void(0);">具身智能教程</a><span class="categoryBar-list-count">13</span><span class="categoryBar-list-descr">1</span></li></ul></div></div>';
-    console.log('已挂载 butterfly_categories_card');
-    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
-  }
-  // 路径匹配逻辑（使用 startsWith）
-  if (location.pathname.startsWith('/categories/') || '/categories/' === 'all') {
-    butterfly_categories_card_injector_config();
-  }
-  </script><!-- hexo injector body_end end --><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"right","width":200,"height":400},"mobile":{"show":true},"react":{"opacity":0.7},"log":false});</script></body></html>
+  </script><script defer src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.js"></script><script defer data-pjax src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper_init.js"></script><!-- hexo injector body_end end --><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"right","width":200,"height":400},"mobile":{"show":true},"react":{"opacity":0.7},"log":false});</script></body></html>
