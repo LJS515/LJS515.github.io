@@ -1,0 +1,1131 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>机器人仿真实战：从 URDF 到 Isaac Lab 并行训练 | YiQiuのblog</title><meta name="author" content="YiQiu"><meta name="copyright" content="YiQiu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#f5f0fa"><meta name="description" content="机器人仿真实战：从 URDF 到 Isaac Lab 并行训练 前面的文章已经讲了很多真实机器人系统里的核心模块：  数学基础 坐标系 运动学 概率滤波 感知与三维理解 机械臂控制 接触与抓取 四足和人形控制  但如果真要把这些东西做成系统，很快会遇到一个很现实的问题： 真机太贵、太慢、太危险，也太不方便反复失败。 机器人开发和纯软件最大的不同是：一次错误不只是程序报错，它可能会让机械臂撞桌子，让">
+<meta property="og:type" content="article">
+<meta property="og:title" content="机器人仿真实战：从 URDF 到 Isaac Lab 并行训练">
+<meta property="og:url" content="https://ljs515.github.io/2026/05/23/%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BB%BF%E7%9C%9F%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BB%8EURDF%E5%88%B0IsaacLab%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83/index.html">
+<meta property="og:site_name" content="YiQiuのblog">
+<meta property="og:description" content="机器人仿真实战：从 URDF 到 Isaac Lab 并行训练 前面的文章已经讲了很多真实机器人系统里的核心模块：  数学基础 坐标系 运动学 概率滤波 感知与三维理解 机械臂控制 接触与抓取 四足和人形控制  但如果真要把这些东西做成系统，很快会遇到一个很现实的问题： 真机太贵、太慢、太危险，也太不方便反复失败。 机器人开发和纯软件最大的不同是：一次错误不只是程序报错，它可能会让机械臂撞桌子，让">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ljs515.github.io/img/04.png">
+<meta property="article:published_time" content="2026-05-23T02:20:00.000Z">
+<meta property="article:modified_time" content="2026-05-23T04:49:07.972Z">
+<meta property="article:author" content="YiQiu">
+<meta property="article:tag" content="具身智能">
+<meta property="article:tag" content="机器人">
+<meta property="article:tag" content="开源项目">
+<meta property="article:tag" content="Sim2Real">
+<meta property="article:tag" content="Isaac Lab">
+<meta property="article:tag" content="仿真">
+<meta property="article:tag" content="MuJoCo">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ljs515.github.io/img/04.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "机器人仿真实战：从 URDF 到 Isaac Lab 并行训练",
+  "url": "https://ljs515.github.io/2026/05/23/%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BB%BF%E7%9C%9F%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BB%8EURDF%E5%88%B0IsaacLab%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83/",
+  "image": "https://ljs515.github.io/img/04.png",
+  "datePublished": "2026-05-23T02:20:00.000Z",
+  "dateModified": "2026-05-23T04:49:07.972Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YiQiu",
+      "url": "https://LJS515.github.io/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/01.png"><link rel="canonical" href="https://ljs515.github.io/2026/05/23/%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BB%BF%E7%9C%9F%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BB%8EURDF%E5%88%B0IsaacLab%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.2"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#2d0a3d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f5f0fa')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chewy&amp;family=Ma+Shan+Zheng&amp;family=Fredoka+One&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":300,"languages":{"author":"作者: YiQiu","link":"链接: ","source":"来源: YiQiuのblog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '机器人仿真实战：从 URDF 到 Isaac Lab 并行训练',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Chewy&family=Fredoka+One&family=Caveat:wght@400;700&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet"><!-- hexo injector head_end start --><link rel="stylesheet" href="/css/categorybar.css"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiperstyle.css" media="print" onload="this.media='all'"><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-image: url(/img/03.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">21</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">52</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/04.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/img/01.png" alt="Logo"><span class="site-name">YiQiuのblog</span></a><a class="nav-page-title" href="/"><span class="site-name">机器人仿真实战：从 URDF 到 Isaac Lab 并行训练</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">机器人仿真实战：从 URDF 到 Isaac Lab 并行训练</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-05-23T02:20:00.000Z" title="发表于 2026-05-23 10:20:00">2026-05-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-05-23T04:49:07.972Z" title="更新于 2026-05-23 12:49:07">2026-05-23</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%95%99%E7%A8%8B/">具身智能教程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">6k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>19分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div class="ai-summary"><div class="ai-explanation" style="display: block;" data-summary="这篇文章系统梳理机器人仿真实战中的工程主线，重点讨论为什么仿真不是“玩具环境”，而是真机开发前最重要的调试、验证、训练和回归平台。内容覆盖 URDF、MJCF、USD 等模型资产格式，MuJoCo、Isaac Lab、Gazebo、Genesis、ManiSkill、Drake 等主流开源项目，传感器仿真、控制器调试、GPU 并行训练、Sim2Real、策略导出和部署回归等关键环节，并给出每一阶段可以并行实践的项目路线和履历表达方式。">YiQiuAI正在绞尽脑汁想思路ING···</div><div class="ai-title"> <div class="ai-title-left"> <i class="fa-brands fa-slack"></i><div class="ai-title-text">YiQiuのAI摘要</div></div><div class="ai-tag" id="ai-tag">HunYuan-Lite</div></div></div><div id="post-outdate-notice" data="{&quot;limitDay&quot;:365,&quot;messagePrev&quot;:&quot;本文最后更新于&quot;,&quot;messageNext&quot;:&quot;天前，部分内容可能已失效&quot;,&quot;postUpdate&quot;:&quot;2026-05-23 12:49:07&quot;}" hidden></div><h1 id="机器人仿真实战：从-URDF-到-Isaac-Lab-并行训练"><a href="#机器人仿真实战：从-URDF-到-Isaac-Lab-并行训练" class="headerlink" title="机器人仿真实战：从 URDF 到 Isaac Lab 并行训练"></a>机器人仿真实战：从 URDF 到 Isaac Lab 并行训练</h1><p><img src="/images/robotics-simulation/simulation-pipeline.png" alt="机器人仿真实战链路图"></p>
+<p>前面的文章已经讲了很多真实机器人系统里的核心模块：</p>
+<ul>
+<li>数学基础</li>
+<li>坐标系</li>
+<li>运动学</li>
+<li>概率滤波</li>
+<li>感知与三维理解</li>
+<li>机械臂控制</li>
+<li>接触与抓取</li>
+<li>四足和人形控制</li>
+</ul>
+<p>但如果真要把这些东西做成系统，很快会遇到一个很现实的问题：</p>
+<p><strong>真机太贵、太慢、太危险，也太不方便反复失败。</strong></p>
+<p>机器人开发和纯软件最大的不同是：一次错误不只是程序报错，它可能会让机械臂撞桌子，让四足摔倒，让电机过流，让结构件受损。</p>
+<p>所以机器人系统里必须有一个“可控的失败场”。</p>
+<p>这个场，就是仿真。</p>
+<p>它接在人形控制、机械臂控制和感知链路之后，也连接后面的机器人学习、ROS 2 系统工程和部署上线。读完这一篇，你应该能理解机器人仿真到底在工程里承担什么角色，URDF &#x2F; MJCF &#x2F; USD 这些格式有什么区别，为什么 MuJoCo、Isaac Lab、Gazebo、Drake、ManiSkill 各有定位，以及如何把一个仿真项目做成能写进履历的完整成果。</p>
+<hr>
+<h2 id="一、为什么机器人一定要做仿真"><a href="#一、为什么机器人一定要做仿真" class="headerlink" title="一、为什么机器人一定要做仿真"></a>一、为什么机器人一定要做仿真</h2><p>很多初学者会把仿真理解成：</p>
+<p><strong>没有真机时先玩一玩。</strong></p>
+<p>这个理解太浅了。</p>
+<p>在成熟机器人开发里，仿真至少有五个价值。</p>
+<h3 id="1-1-降低试错成本"><a href="#1-1-降低试错成本" class="headerlink" title="1.1 降低试错成本"></a>1.1 降低试错成本</h3><p>真机调试很慢。</p>
+<p>你每改一次控制参数，都可能需要：</p>
+<ul>
+<li>上电</li>
+<li>标零</li>
+<li>启动驱动器</li>
+<li>检查急停</li>
+<li>低速试跑</li>
+<li>观察日志</li>
+<li>防止撞机</li>
+</ul>
+<p>而在仿真里，你可以一秒钟重置一百次。</p>
+<p>这对控制器调试、强化学习训练、异常恢复测试都非常重要。</p>
+<h3 id="1-2-让失败可重复"><a href="#1-2-让失败可重复" class="headerlink" title="1.2 让失败可重复"></a>1.2 让失败可重复</h3><p>真实机器人失败经常很难复现。</p>
+<p>比如：</p>
+<ul>
+<li>机械臂某次抓取滑了</li>
+<li>四足某次踩空了</li>
+<li>人形某次单支撑阶段摔了</li>
+<li>SLAM 某一帧突然漂了</li>
+</ul>
+<p>真机上，这些失败可能和地面摩擦、光照、初始姿态、网络延迟、传感器噪声都有关。</p>
+<p>仿真能让你固定变量，反复复现同一个失败场景。</p>
+<h3 id="1-3-提前验证系统结构"><a href="#1-3-提前验证系统结构" class="headerlink" title="1.3 提前验证系统结构"></a>1.3 提前验证系统结构</h3><p>仿真不只是验证算法。</p>
+<p>它还能提前验证：</p>
+<ul>
+<li>URDF &#x2F; MJCF 模型是否正确</li>
+<li>坐标轴方向是否一致</li>
+<li>关节 limit 是否合理</li>
+<li>控制频率是否稳定</li>
+<li>传感器话题是否接对</li>
+<li>规划器输出是否能被控制器执行</li>
+</ul>
+<p>很多问题最好在真机前就暴露。</p>
+<h3 id="1-4-支撑大规模训练"><a href="#1-4-支撑大规模训练" class="headerlink" title="1.4 支撑大规模训练"></a>1.4 支撑大规模训练</h3><p>强化学习和模仿学习很依赖数据。</p>
+<p>真机上采集几十万次试错几乎不现实。</p>
+<p>但在 Isaac Lab、MuJoCo Playground、Genesis 这类框架里，可以并行跑大量环境。</p>
+<p>这就是为什么腿式机器人、灵巧操作、移动操作越来越依赖 GPU 并行仿真。</p>
+<h3 id="1-5-建立部署回归机制"><a href="#1-5-建立部署回归机制" class="headerlink" title="1.5 建立部署回归机制"></a>1.5 建立部署回归机制</h3><p>机器人系统上线后，每次改代码都应该问：</p>
+<p><strong>有没有把以前能跑的能力改坏。</strong></p>
+<p>仿真可以承担回归测试：</p>
+<ul>
+<li>固定场景</li>
+<li>固定初始状态</li>
+<li>固定评估指标</li>
+<li>每次改动后自动跑一遍</li>
+</ul>
+<p>这会让机器人开发更像工程，而不是每次靠现场感觉。</p>
+<hr>
+<h2 id="二、仿真不是越真实越好，而是要服务目标"><a href="#二、仿真不是越真实越好，而是要服务目标" class="headerlink" title="二、仿真不是越真实越好，而是要服务目标"></a>二、仿真不是越真实越好，而是要服务目标</h2><p>做仿真时最容易陷入一个误区：</p>
+<p><strong>追求视觉上像真机。</strong></p>
+<p>但机器人仿真的核心不是“看起来很真实”，而是：</p>
+<p><strong>关键物理、感知和控制误差是否足够接近真实任务。</strong></p>
+<p>不同任务需要不同仿真精度。</p>
+<h3 id="2-1-机械臂轨迹控制"><a href="#2-1-机械臂轨迹控制" class="headerlink" title="2.1 机械臂轨迹控制"></a>2.1 机械臂轨迹控制</h3><p>如果只是验证机械臂轨迹规划，重点是：</p>
+<ul>
+<li>关节 limit</li>
+<li>碰撞模型</li>
+<li>末端位姿</li>
+<li>轨迹平滑性</li>
+<li>控制周期</li>
+</ul>
+<p>这时不一定需要特别复杂的视觉渲染。</p>
+<h3 id="2-2-接触抓取"><a href="#2-2-接触抓取" class="headerlink" title="2.2 接触抓取"></a>2.2 接触抓取</h3><p>如果任务涉及抓取，重点就变成：</p>
+<ul>
+<li>接触模型</li>
+<li>摩擦系数</li>
+<li>物体质量</li>
+<li>夹爪刚度</li>
+<li>时间步长</li>
+<li>求解器稳定性</li>
+</ul>
+<p>这时“看起来抓住了”不一定代表物理上可信。</p>
+<h3 id="2-3-四足和人形控制"><a href="#2-3-四足和人形控制" class="headerlink" title="2.3 四足和人形控制"></a>2.3 四足和人形控制</h3><p>腿式机器人最敏感的是：</p>
+<ul>
+<li>质量分布</li>
+<li>惯量</li>
+<li>足底摩擦</li>
+<li>接触切换</li>
+<li>关节力矩限制</li>
+<li>控制延迟</li>
+</ul>
+<p>模型只要这些地方偏了，仿真里学到的策略上真机就可能抖、滑、摔。</p>
+<h3 id="2-4-机器人学习"><a href="#2-4-机器人学习" class="headerlink" title="2.4 机器人学习"></a>2.4 机器人学习</h3><p>强化学习更关心：</p>
+<ul>
+<li>并行环境数量</li>
+<li>reset 速度</li>
+<li>随机化能力</li>
+<li>训练吞吐量</li>
+<li>奖励计算开销</li>
+<li>策略导出路径</li>
+</ul>
+<p>这时 Isaac Lab、MuJoCo Playground、Genesis 这类框架的工程价值会很明显。</p>
+<p>所以选仿真器之前，先问一句：</p>
+<p><strong>我要验证什么。</strong></p>
+<hr>
+<h2 id="三、模型资产：URDF、MJCF-和-USD"><a href="#三、模型资产：URDF、MJCF-和-USD" class="headerlink" title="三、模型资产：URDF、MJCF 和 USD"></a>三、模型资产：URDF、MJCF 和 USD</h2><p>仿真的第一步不是训练，也不是写控制器，而是模型资产。</p>
+<p>模型资产描述的是：</p>
+<ul>
+<li>机器人长什么样</li>
+<li>有哪些 link</li>
+<li>有哪些 joint</li>
+<li>质量是多少</li>
+<li>惯量是多少</li>
+<li>碰撞体是什么</li>
+<li>关节范围是多少</li>
+<li>驱动器约束是什么</li>
+</ul>
+<p>这些东西错了，后面所有仿真结果都会偏。</p>
+<h3 id="3-1-URDF"><a href="#3-1-URDF" class="headerlink" title="3.1 URDF"></a>3.1 URDF</h3><p>URDF 是 ROS 生态里最常见的机器人描述格式。</p>
+<p>它适合：</p>
+<ul>
+<li>表达 link &#x2F; joint 结构</li>
+<li>接入 TF</li>
+<li>在 RViz 里可视化</li>
+<li>和 MoveIt 2、ros2_control、Gazebo 配合</li>
+</ul>
+<p>URDF 的核心结构大概是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">robot</span><br><span class="line">  -&gt; link</span><br><span class="line">  -&gt; joint</span><br><span class="line">  -&gt; visual</span><br><span class="line">  -&gt; collision</span><br><span class="line">  -&gt; inertial</span><br></pre></td></tr></table></figure>
+
+<p>初学者最容易只关心 visual，不关心 collision 和 inertial。</p>
+<p>但真实仿真里，最关键的往往是：</p>
+<ul>
+<li>collision 是否简化合理</li>
+<li>inertial 是否接近真实</li>
+<li>joint axis 是否写对</li>
+<li>origin 是否对齐</li>
+</ul>
+<h3 id="3-2-MJCF"><a href="#3-2-MJCF" class="headerlink" title="3.2 MJCF"></a>3.2 MJCF</h3><p>MJCF 是 MuJoCo 常用模型格式。</p>
+<p>它比 URDF 更贴近物理仿真。</p>
+<p>MuJoCo 在接触、约束、关节、执行器建模方面很强，所以很多机器人控制和 RL 项目会把模型整理成 MJCF。</p>
+<p>典型资源是 <a target="_blank" rel="noopener" href="https://github.com/google-deepmind/mujoco_menagerie">mujoco_menagerie</a>。</p>
+<p>这里有很多高质量机器人模型，例如机械臂、四足、人形和灵巧手。</p>
+<h3 id="3-3-USD"><a href="#3-3-USD" class="headerlink" title="3.3 USD"></a>3.3 USD</h3><p>USD 在 Isaac Sim &#x2F; Isaac Lab 生态里非常重要。</p>
+<p>它适合：</p>
+<ul>
+<li>大规模场景组织</li>
+<li>复杂材质和渲染</li>
+<li>多机器人资产管理</li>
+<li>与 NVIDIA Omniverse 生态配合</li>
+</ul>
+<p>如果目标是 Isaac Lab 训练或 Isaac Sim 场景构建，USD 会经常出现。</p>
+<h3 id="3-4-三种格式怎么选"><a href="#3-4-三种格式怎么选" class="headerlink" title="3.4 三种格式怎么选"></a>3.4 三种格式怎么选</h3><p>一个实用判断是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ROS / MoveIt / Gazebo -&gt; URDF</span><br><span class="line">MuJoCo / RL control -&gt; MJCF</span><br><span class="line">Isaac Sim / Isaac Lab -&gt; USD</span><br></pre></td></tr></table></figure>
+
+<p>但这不是绝对的。</p>
+<p>工程里常常需要互相转换。</p>
+<p>真正重要的是：</p>
+<p><strong>不管格式是什么，质量、惯量、碰撞体、关节轴和坐标系必须一致。</strong></p>
+<h3 id="3-5-最小实践项目"><a href="#3-5-最小实践项目" class="headerlink" title="3.5 最小实践项目"></a>3.5 最小实践项目</h3><p>建议做一个模型资产小项目：</p>
+<ol>
+<li>找一个简单机械臂或四足 URDF。</li>
+<li>在 RViz2 里显示 TF 链。</li>
+<li>在 Gazebo 或 MuJoCo 里加载模型。</li>
+<li>检查每个关节轴方向。</li>
+<li>简化 collision mesh。</li>
+<li>对比 visual 和 collision 是否错位。</li>
+</ol>
+<p>履历表达可以写成：</p>
+<ul>
+<li>完成机器人 URDF &#x2F; MJCF 模型整理，修正关节轴、惯量、碰撞体和 TF 链，并在 RViz2、MuJoCo、Gazebo 中完成交叉验证。</li>
+</ul>
+<hr>
+<h2 id="四、主流仿真器怎么选"><a href="#四、主流仿真器怎么选" class="headerlink" title="四、主流仿真器怎么选"></a>四、主流仿真器怎么选</h2><p>不同仿真器不是谁绝对更好，而是适合的任务不同。</p>
+<h3 id="4-1-MuJoCo"><a href="#4-1-MuJoCo" class="headerlink" title="4.1 MuJoCo"></a>4.1 MuJoCo</h3><p><a target="_blank" rel="noopener" href="https://github.com/google-deepmind/mujoco">MuJoCo</a> 是机器人控制和强化学习里非常常见的物理仿真器。</p>
+<p>它的优势是：</p>
+<ul>
+<li>连续动力学稳定</li>
+<li>接触建模口碑好</li>
+<li>MJCF 表达能力强</li>
+<li>适合控制和 RL 研究</li>
+<li>生态里有大量基准环境</li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>机械臂控制</li>
+<li>四足控制</li>
+<li>人形控制</li>
+<li>强化学习 baseline</li>
+<li>接触任务验证</li>
+</ul>
+<p>如果你想从一个仿真器开始，MuJoCo 是非常好的选择。</p>
+<h3 id="4-2-Isaac-Sim-和-Isaac-Lab"><a href="#4-2-Isaac-Sim-和-Isaac-Lab" class="headerlink" title="4.2 Isaac Sim 和 Isaac Lab"></a>4.2 Isaac Sim 和 Isaac Lab</h3><p><a target="_blank" rel="noopener" href="https://github.com/isaac-sim/IsaacLab">Isaac Lab</a> 是 NVIDIA 当前主推的机器人学习框架，建立在 Isaac Sim 生态之上。</p>
+<p>它的重点是：</p>
+<ul>
+<li>GPU 并行训练</li>
+<li>大量环境同时 rollout</li>
+<li>强化学习任务配置</li>
+<li>机器人资产管理</li>
+<li>策略训练、评估和导出</li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>四足 RL</li>
+<li>人形 RL</li>
+<li>操作策略训练</li>
+<li>大规模 domain randomization</li>
+<li>Sim2Real 预训练</li>
+</ul>
+<p>如果目标是“跑很多环境训练策略”，Isaac Lab 很关键。</p>
+<h3 id="4-3-Gazebo-gz-sim"><a href="#4-3-Gazebo-gz-sim" class="headerlink" title="4.3 Gazebo &#x2F; gz-sim"></a>4.3 Gazebo &#x2F; gz-sim</h3><p>Gazebo 是 ROS 生态里最传统、最常见的仿真工具之一。</p>
+<p>它的优势是：</p>
+<ul>
+<li>ROS 接入自然</li>
+<li>传感器仿真完整</li>
+<li>插件生态成熟</li>
+<li>适合导航、移动机器人和系统集成</li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>ROS 2 系统联调</li>
+<li>Nav2 导航</li>
+<li>传感器话题仿真</li>
+<li>ros2_control 联调</li>
+<li>多节点系统验证</li>
+</ul>
+<p>如果目标是“让 ROS 系统跑起来”，Gazebo 很有用。</p>
+<h3 id="4-4-Genesis"><a href="#4-4-Genesis" class="headerlink" title="4.4 Genesis"></a>4.4 Genesis</h3><p><a target="_blank" rel="noopener" href="https://github.com/Genesis-Embodied-AI/Genesis">Genesis</a> 是 2024 末后社区关注度很高的仿真框架。</p>
+<p>它的核心卖点是：</p>
+<ul>
+<li>高速并行</li>
+<li>统一物理仿真</li>
+<li>机器人学习友好</li>
+<li>社区增长快</li>
+</ul>
+<p>它适合长期跟踪，尤其是关注高速训练和可微物理方向的人。</p>
+<p>但工程采用时要注意版本成熟度、文档稳定性和与现有工具链的兼容。</p>
+<h3 id="4-5-ManiSkill"><a href="#4-5-ManiSkill" class="headerlink" title="4.5 ManiSkill"></a>4.5 ManiSkill</h3><p><a target="_blank" rel="noopener" href="https://github.com/haosulab/ManiSkill">ManiSkill</a> 更偏操作任务和学习基准。</p>
+<p>它适合：</p>
+<ul>
+<li>桌面操作</li>
+<li>抓取</li>
+<li>开门、抽屉、搬运</li>
+<li>机器人学习 benchmark</li>
+<li>模仿学习和强化学习任务评估</li>
+</ul>
+<p>如果目标是机械臂操作、灵巧手、移动操作，ManiSkill 值得关注。</p>
+<h3 id="4-6-Drake"><a href="#4-6-Drake" class="headerlink" title="4.6 Drake"></a>4.6 Drake</h3><p><a target="_blank" rel="noopener" href="https://github.com/RobotLocomotion/drake">Drake</a> 更偏系统级机器人建模、优化和控制。</p>
+<p>它适合：</p>
+<ul>
+<li>轨迹优化</li>
+<li>接触建模</li>
+<li>多体动力学</li>
+<li>控制器验证</li>
+<li>规划与仿真结合</li>
+</ul>
+<p>Drake 不一定是入门最轻的工具，但很适合深入理解机器人动力学和优化。</p>
+<hr>
+<h2 id="五、仿真系统的总链路"><a href="#五、仿真系统的总链路" class="headerlink" title="五、仿真系统的总链路"></a>五、仿真系统的总链路</h2><p>一条完整仿真链路可以这样理解：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">robot model</span><br><span class="line">  -&gt; physics engine</span><br><span class="line">  -&gt; sensors</span><br><span class="line">  -&gt; controller</span><br><span class="line">  -&gt; task environment</span><br><span class="line">  -&gt; evaluation</span><br><span class="line">  -&gt; sim2real</span><br><span class="line">  -&gt; deployment regression</span><br></pre></td></tr></table></figure>
+
+<p>这条链里任何一段不稳，结果都会出问题。</p>
+<h3 id="5-1-模型资产"><a href="#5-1-模型资产" class="headerlink" title="5.1 模型资产"></a>5.1 模型资产</h3><p>模型资产决定系统的物理基础。</p>
+<p>重点检查：</p>
+<ul>
+<li>link 质量</li>
+<li>惯量</li>
+<li>joint axis</li>
+<li>joint limit</li>
+<li>collision mesh</li>
+<li>visual mesh</li>
+<li>actuator limit</li>
+</ul>
+<h3 id="5-2-物理引擎"><a href="#5-2-物理引擎" class="headerlink" title="5.2 物理引擎"></a>5.2 物理引擎</h3><p>物理引擎决定接触、碰撞和动力学如何计算。</p>
+<p>重点关注：</p>
+<ul>
+<li>timestep</li>
+<li>solver iteration</li>
+<li>contact stiffness</li>
+<li>damping</li>
+<li>friction</li>
+<li>constraint stability</li>
+</ul>
+<p>很多仿真发散不是控制器错，而是物理参数不合适。</p>
+<h3 id="5-3-传感器仿真"><a href="#5-3-传感器仿真" class="headerlink" title="5.3 传感器仿真"></a>5.3 传感器仿真</h3><p>机器人不是直接读取真值。</p>
+<p>真实系统里通常只有：</p>
+<ul>
+<li>IMU</li>
+<li>encoder</li>
+<li>camera</li>
+<li>depth</li>
+<li>LiDAR</li>
+<li>force &#x2F; torque</li>
+</ul>
+<p>所以仿真也应该尽量模拟这些输入，而不是让控制器直接偷看完美状态。</p>
+<h3 id="5-4-控制器"><a href="#5-4-控制器" class="headerlink" title="5.4 控制器"></a>5.4 控制器</h3><p>控制器在仿真里要尽量接近真机结构。</p>
+<p>例如：</p>
+<ul>
+<li>真机是 500 Hz 控制，仿真也要考虑控制周期</li>
+<li>真机有力矩限制，仿真也要限制</li>
+<li>真机有延迟，仿真不能完全忽略</li>
+<li>真机电机有饱和，仿真不能无限输出</li>
+</ul>
+<p>否则仿真里能跑的控制器，上真机可能完全不稳。</p>
+<h3 id="5-5-评估指标"><a href="#5-5-评估指标" class="headerlink" title="5.5 评估指标"></a>5.5 评估指标</h3><p>仿真项目一定要有指标。</p>
+<p>机械臂可以看：</p>
+<ul>
+<li>末端误差</li>
+<li>轨迹平滑性</li>
+<li>碰撞次数</li>
+<li>到达时间</li>
+</ul>
+<p>四足可以看：</p>
+<ul>
+<li>速度跟踪误差</li>
+<li>摔倒率</li>
+<li>足端打滑</li>
+<li>能耗</li>
+<li>姿态误差</li>
+</ul>
+<p>操作任务可以看：</p>
+<ul>
+<li>成功率</li>
+<li>接触力峰值</li>
+<li>抓取保持时间</li>
+<li>失败类型分布</li>
+</ul>
+<p>没有指标，仿真就会变成“看起来不错”。</p>
+<hr>
+<h2 id="六、并行训练为什么重要"><a href="#六、并行训练为什么重要" class="headerlink" title="六、并行训练为什么重要"></a>六、并行训练为什么重要</h2><p>传统控制器可以靠单环境调试。</p>
+<p>但强化学习不行。</p>
+<p>RL 需要大量试错。</p>
+<p>如果一个环境一秒只能跑几步，训练会非常慢。</p>
+<p>GPU 并行训练的核心思想是：</p>
+<p><strong>同时跑成百上千个环境，让策略一次收集大量经验。</strong></p>
+<p>这就是 Isaac Lab、legged_gym、MuJoCo Playground、Genesis 这类框架重要的原因。</p>
+<h3 id="6-1-并行环境长什么样"><a href="#6-1-并行环境长什么样" class="headerlink" title="6.1 并行环境长什么样"></a>6.1 并行环境长什么样</h3><p>想象你在一张 GPU 上同时放了很多个机器人。</p>
+<p>每个机器人都在不同初始状态下尝试任务：</p>
+<ul>
+<li>有的地面摩擦更低</li>
+<li>有的质量稍微不同</li>
+<li>有的外力扰动更大</li>
+<li>有的目标速度不同</li>
+<li>有的传感器噪声更强</li>
+</ul>
+<p>策略在这些环境里同时学习。</p>
+<p>这能让训练更快，也能让策略更鲁棒。</p>
+<h3 id="6-2-legged-gym-的意义"><a href="#6-2-legged-gym-的意义" class="headerlink" title="6.2 legged_gym 的意义"></a>6.2 legged_gym 的意义</h3><p><a target="_blank" rel="noopener" href="https://github.com/leggedrobotics/legged_gym">legged_gym</a> 是腿式 RL 训练里非常重要的项目。</p>
+<p>它把四足机器人在 Isaac Gym 里并行训练的流程整理得很清楚。</p>
+<p>很多后续四足、人形 RL 项目都受它影响。</p>
+<p>即使现在 Isaac Lab 成为更主流的新框架，legged_gym 仍然值得读，因为它结构直观，适合理解腿式 RL 的基本工程组织。</p>
+<h3 id="6-3-Isaac-Lab-的意义"><a href="#6-3-Isaac-Lab-的意义" class="headerlink" title="6.3 Isaac Lab 的意义"></a>6.3 Isaac Lab 的意义</h3><p>Isaac Lab 更像是新一代机器人学习工作台。</p>
+<p>它把这些事情组织到一起：</p>
+<ul>
+<li>场景</li>
+<li>资产</li>
+<li>任务</li>
+<li>环境</li>
+<li>奖励</li>
+<li>reset</li>
+<li>随机化</li>
+<li>RL 训练</li>
+<li>策略评估</li>
+</ul>
+<p>如果目标是写能长期扩展的机器人学习项目，Isaac Lab 值得深入。</p>
+<h3 id="6-4-MuJoCo-Playground-的意义"><a href="#6-4-MuJoCo-Playground-的意义" class="headerlink" title="6.4 MuJoCo Playground 的意义"></a>6.4 MuJoCo Playground 的意义</h3><p><a target="_blank" rel="noopener" href="https://github.com/google-deepmind/mujoco_playground">MuJoCo Playground</a> 面向机器人学习环境集合。</p>
+<p>它的价值是把 MuJoCo 和现代学习流程结合得更紧。</p>
+<p>如果你更喜欢 MuJoCo 的物理和轻量接口，可以关注这条线。</p>
+<hr>
+<h2 id="七、Sim2Real：仿真到真机为什么会失败"><a href="#七、Sim2Real：仿真到真机为什么会失败" class="headerlink" title="七、Sim2Real：仿真到真机为什么会失败"></a>七、Sim2Real：仿真到真机为什么会失败</h2><p>仿真做得再好，也不等于真机一定能跑。</p>
+<p>这中间有一道鸿沟：</p>
+<p><strong>simulation reality gap。</strong></p>
+<h3 id="7-1-质量和惯量偏差"><a href="#7-1-质量和惯量偏差" class="headerlink" title="7.1 质量和惯量偏差"></a>7.1 质量和惯量偏差</h3><p>真实机器人每个 link 的质量和惯量可能和模型不一致。</p>
+<p>原因包括：</p>
+<ul>
+<li>CAD 模型不准</li>
+<li>线缆没有建模</li>
+<li>螺丝和外壳被忽略</li>
+<li>电池位置变化</li>
+<li>负载变化</li>
+</ul>
+<p>腿式和人形机器人对惯量很敏感。</p>
+<p>上半身质量稍微偏一点，步态和恢复策略都会受影响。</p>
+<h3 id="7-2-摩擦偏差"><a href="#7-2-摩擦偏差" class="headerlink" title="7.2 摩擦偏差"></a>7.2 摩擦偏差</h3><p>仿真里的地面摩擦通常是一个参数。</p>
+<p>真实世界里，摩擦会随材料、灰尘、温度、磨损变化。</p>
+<p>四足和人形最怕：</p>
+<ul>
+<li>仿真里不滑</li>
+<li>真机一上地就滑</li>
+</ul>
+<p>所以训练时通常要随机化摩擦。</p>
+<h3 id="7-3-执行器偏差"><a href="#7-3-执行器偏差" class="headerlink" title="7.3 执行器偏差"></a>7.3 执行器偏差</h3><p>真实电机不是理想力矩源。</p>
+<p>它有：</p>
+<ul>
+<li>延迟</li>
+<li>饱和</li>
+<li>温升</li>
+<li>背隙</li>
+<li>静摩擦</li>
+<li>控制带宽限制</li>
+</ul>
+<p>如果仿真里执行器太理想，策略会学到真机做不到的动作。</p>
+<h3 id="7-4-传感器偏差"><a href="#7-4-传感器偏差" class="headerlink" title="7.4 传感器偏差"></a>7.4 传感器偏差</h3><p>真实传感器有：</p>
+<ul>
+<li>噪声</li>
+<li>漂移</li>
+<li>延迟</li>
+<li>掉帧</li>
+<li>量程限制</li>
+</ul>
+<p>如果仿真控制器直接读取完美状态，上真机后很容易崩。</p>
+<p>所以训练策略时，要尽量让输入接近真机可观测量。</p>
+<h3 id="7-5-Domain-Randomization"><a href="#7-5-Domain-Randomization" class="headerlink" title="7.5 Domain Randomization"></a>7.5 Domain Randomization</h3><p>Domain Randomization 是最常见的 Sim2Real 方法之一。</p>
+<p>基本思路是：</p>
+<p><strong>训练时故意让仿真环境变化，让策略不要过度依赖某个精确参数。</strong></p>
+<p>常见随机化项包括：</p>
+<ul>
+<li>质量</li>
+<li>摩擦</li>
+<li>地形</li>
+<li>关节阻尼</li>
+<li>电机强度</li>
+<li>传感器噪声</li>
+<li>观测延迟</li>
+<li>外力扰动</li>
+</ul>
+<p>这不是让仿真更真实，而是让策略更能适应不真实。</p>
+<h3 id="7-6-System-Identification"><a href="#7-6-System-Identification" class="headerlink" title="7.6 System Identification"></a>7.6 System Identification</h3><p>System Identification 是另一条路线。</p>
+<p>它试图让仿真参数更接近真实系统。</p>
+<p>例如：</p>
+<ul>
+<li>测真实质量</li>
+<li>标定摩擦</li>
+<li>测电机响应</li>
+<li>拟合延迟</li>
+<li>记录真机轨迹后反推参数</li>
+</ul>
+<p>实际工程里，常常是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">system identification + domain randomization</span><br></pre></td></tr></table></figure>
+
+<p>两者一起用。</p>
+<hr>
+<h2 id="八、开源项目矩阵"><a href="#八、开源项目矩阵" class="headerlink" title="八、开源项目矩阵"></a>八、开源项目矩阵</h2><p><img src="/images/robotics-simulation/project-matrix.png" alt="机器人仿真开源项目矩阵"></p>
+<p>仿真方向项目很多，建议按目标分组学习。</p>
+<h3 id="8-1-物理仿真"><a href="#8-1-物理仿真" class="headerlink" title="8.1 物理仿真"></a>8.1 物理仿真</h3><p>重点项目：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/google-deepmind/mujoco">MuJoCo</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/isaac-sim/IsaacLab">Isaac Lab</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/gazebosim/gz-sim">Gazebo</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/Genesis-Embodied-AI/Genesis">Genesis</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/RobotLocomotion/drake">Drake</a></li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>动力学验证</li>
+<li>接触任务</li>
+<li>控制器调试</li>
+<li>多体系统建模</li>
+<li>机器人学习环境</li>
+</ul>
+<h3 id="8-2-资产和模型"><a href="#8-2-资产和模型" class="headerlink" title="8.2 资产和模型"></a>8.2 资产和模型</h3><p>重点项目：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/google-deepmind/mujoco_menagerie">mujoco_menagerie</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/Rhoban/onshape-to-robot">OnShape-to-Robot</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/gkjohnson/urdf-loaders">urdf-loaders</a></li>
+<li>Unitree 官方 URDF &#x2F; MJCF 资源</li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>机器人模型整理</li>
+<li>URDF &#x2F; MJCF 转换</li>
+<li>碰撞体简化</li>
+<li>TF 链验证</li>
+<li>资产跨平台迁移</li>
+</ul>
+<h3 id="8-3-并行训练"><a href="#8-3-并行训练" class="headerlink" title="8.3 并行训练"></a>8.3 并行训练</h3><p>重点项目：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/isaac-sim/IsaacLab">Isaac Lab</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/leggedrobotics/legged_gym">legged_gym</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/leggedrobotics/rsl_rl">rsl_rl</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/Denys88/rl_games">rl_games</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/google-deepmind/mujoco_playground">MuJoCo Playground</a></li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>四足步态训练</li>
+<li>人形 locomotion</li>
+<li>PPO baseline</li>
+<li>奖励函数调试</li>
+<li>domain randomization</li>
+</ul>
+<h3 id="8-4-操作任务"><a href="#8-4-操作任务" class="headerlink" title="8.4 操作任务"></a>8.4 操作任务</h3><p>重点项目：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/haosulab/ManiSkill">ManiSkill</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/ARISE-Initiative/robosuite">robosuite</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/haosulab/SAPIEN">SAPIEN</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/real-stanford/diffusion_policy">Diffusion Policy</a></li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>桌面抓取</li>
+<li>开门抽屉</li>
+<li>夹爪操作</li>
+<li>模仿学习</li>
+<li>操作策略评估</li>
+</ul>
+<h3 id="8-5-履历产出"><a href="#8-5-履历产出" class="headerlink" title="8.5 履历产出"></a>8.5 履历产出</h3><p>仿真项目最好留下这些材料：</p>
+<ul>
+<li>可运行 demo</li>
+<li>训练曲线</li>
+<li>策略视频</li>
+<li>配置文件</li>
+<li>失败案例</li>
+<li>sim2real 分析</li>
+<li>README 复盘</li>
+</ul>
+<p>只写“熟悉 Isaac Lab”没有分量。</p>
+<p>更好的写法是：</p>
+<ul>
+<li>基于 Isaac Lab 复现四足 locomotion PPO 训练，完成 4096 并行环境配置、奖励函数调试、domain randomization 对比和策略视频评估。</li>
+<li>基于 MuJoCo 搭建机械臂轨迹跟踪仿真，完成 URDF &#x2F; MJCF 模型检查、PD 控制器实现、扰动恢复测试和误差曲线可视化。</li>
+</ul>
+<hr>
+<h2 id="九、最推荐做的三个仿真项目"><a href="#九、最推荐做的三个仿真项目" class="headerlink" title="九、最推荐做的三个仿真项目"></a>九、最推荐做的三个仿真项目</h2><p>如果你想把这一层做成履历亮点，可以优先做下面三个。</p>
+<h3 id="9-1-项目一：从-URDF-到可运行仿真"><a href="#9-1-项目一：从-URDF-到可运行仿真" class="headerlink" title="9.1 项目一：从 URDF 到可运行仿真"></a>9.1 项目一：从 URDF 到可运行仿真</h3><p>目标：</p>
+<p><strong>把一个机器人模型从文件变成可控制、可观测、可调试的仿真系统。</strong></p>
+<p>技术链路：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">URDF / MJCF</span><br><span class="line">  -&gt; visual check</span><br><span class="line">  -&gt; collision check</span><br><span class="line">  -&gt; joint limit</span><br><span class="line">  -&gt; physics simulation</span><br><span class="line">  -&gt; controller</span><br><span class="line">  -&gt; log and visualization</span><br></pre></td></tr></table></figure>
+
+<p>最小实现：</p>
+<ol>
+<li>选择一个机械臂或四足模型。</li>
+<li>在 RViz2 或 urdf viewer 里检查模型。</li>
+<li>在 MuJoCo &#x2F; Gazebo &#x2F; Isaac Lab 中加载。</li>
+<li>检查关节轴、关节范围和 collision。</li>
+<li>写一个简单 PD 控制器。</li>
+<li>记录末端误差或姿态误差。</li>
+</ol>
+<p>履历表达：</p>
+<ul>
+<li>完成机器人模型从 URDF &#x2F; MJCF 到仿真环境的迁移，修正关节轴、碰撞体和惯量参数，并实现基础 PD 控制和误差评估。</li>
+</ul>
+<h3 id="9-2-项目二：Isaac-Lab-并行训练-baseline"><a href="#9-2-项目二：Isaac-Lab-并行训练-baseline" class="headerlink" title="9.2 项目二：Isaac Lab 并行训练 baseline"></a>9.2 项目二：Isaac Lab 并行训练 baseline</h3><p>目标：</p>
+<p><strong>跑通一个可复现的并行 RL 训练任务。</strong></p>
+<p>技术链路：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Isaac Lab task</span><br><span class="line">  -&gt; environment config</span><br><span class="line">  -&gt; reward design</span><br><span class="line">  -&gt; PPO training</span><br><span class="line">  -&gt; evaluation</span><br><span class="line">  -&gt; policy export</span><br></pre></td></tr></table></figure>
+
+<p>最小实现：</p>
+<ol>
+<li>选择 Isaac Lab 里的现成任务。</li>
+<li>跑通训练脚本。</li>
+<li>保存 reward 曲线。</li>
+<li>修改一个奖励项。</li>
+<li>对比训练结果。</li>
+<li>导出策略并录制评估视频。</li>
+</ol>
+<p>履历表达：</p>
+<ul>
+<li>基于 Isaac Lab 复现机器人并行强化学习训练，完成任务配置、奖励函数修改、训练曲线对比、策略评估视频和 policy export。</li>
+</ul>
+<h3 id="9-3-项目三：Sim2Real-风险分析"><a href="#9-3-项目三：Sim2Real-风险分析" class="headerlink" title="9.3 项目三：Sim2Real 风险分析"></a>9.3 项目三：Sim2Real 风险分析</h3><p>目标：</p>
+<p><strong>不是一定上真机，而是系统分析仿真到真机最可能失败在哪里。</strong></p>
+<p>技术链路：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">simulation policy</span><br><span class="line">  -&gt; parameter randomization</span><br><span class="line">  -&gt; robustness evaluation</span><br><span class="line">  -&gt; failure cases</span><br><span class="line">  -&gt; sim2real checklist</span><br></pre></td></tr></table></figure>
+
+<p>最小实现：</p>
+<ol>
+<li>选一个训练好的控制器或策略。</li>
+<li>随机化摩擦、质量、延迟、噪声。</li>
+<li>记录成功率变化。</li>
+<li>找出最敏感参数。</li>
+<li>写一份 Sim2Real 风险清单。</li>
+</ol>
+<p>履历表达：</p>
+<ul>
+<li>对机器人仿真策略进行 Sim2Real 鲁棒性评估，分析摩擦、质量、延迟和观测噪声对成功率的影响，并形成部署风险清单。</li>
+</ul>
+<p>这个项目非常适合没有真机的人。</p>
+<p>因为它证明你理解真实机器人问题，而不是只会跑 demo。</p>
+<hr>
+<h2 id="十、常见失效模式"><a href="#十、常见失效模式" class="headerlink" title="十、常见失效模式"></a>十、常见失效模式</h2><p>仿真项目最怕“看起来能跑，但结果没有可信度”。</p>
+<p>下面这些问题非常常见。</p>
+<h3 id="10-1-模型掉地或飞天"><a href="#10-1-模型掉地或飞天" class="headerlink" title="10.1 模型掉地或飞天"></a>10.1 模型掉地或飞天</h3><p>常见原因：</p>
+<ul>
+<li>质量太小或太大</li>
+<li>惯量矩阵不合理</li>
+<li>collision mesh 穿插</li>
+<li>joint limit 写错</li>
+<li>初始姿态穿模</li>
+<li>timestep 太大</li>
+</ul>
+<p>排查顺序：</p>
+<ol>
+<li>先关掉控制器。</li>
+<li>只加载模型看自由下落。</li>
+<li>检查 collision。</li>
+<li>检查 inertial。</li>
+<li>降低 timestep。</li>
+</ol>
+<h3 id="10-2-控制器在仿真里震荡"><a href="#10-2-控制器在仿真里震荡" class="headerlink" title="10.2 控制器在仿真里震荡"></a>10.2 控制器在仿真里震荡</h3><p>常见原因：</p>
+<ul>
+<li>PD 增益太大</li>
+<li>控制频率和仿真频率不匹配</li>
+<li>没有考虑力矩限制</li>
+<li>关节阻尼太小</li>
+<li>延迟被忽略</li>
+</ul>
+<p>不要一上来调复杂算法。</p>
+<p>先确认基础控制环是稳定的。</p>
+<h3 id="10-3-训练曲线很好，但策略动作很怪"><a href="#10-3-训练曲线很好，但策略动作很怪" class="headerlink" title="10.3 训练曲线很好，但策略动作很怪"></a>10.3 训练曲线很好，但策略动作很怪</h3><p>常见原因：</p>
+<ul>
+<li>奖励函数被 hack</li>
+<li>termination 条件不合理</li>
+<li>观测里泄漏了真值</li>
+<li>动作惩罚太弱</li>
+<li>reset 状态太单一</li>
+</ul>
+<p>RL 里最危险的是：</p>
+<p><strong>奖励上涨不代表行为正确。</strong></p>
+<p>一定要看视频、看动作、看失败案例。</p>
+<h3 id="10-4-仿真里能走，真机上很抖"><a href="#10-4-仿真里能走，真机上很抖" class="headerlink" title="10.4 仿真里能走，真机上很抖"></a>10.4 仿真里能走，真机上很抖</h3><p>常见原因：</p>
+<ul>
+<li>执行器模型太理想</li>
+<li>没有观测噪声</li>
+<li>没有控制延迟</li>
+<li>摩擦随机化不足</li>
+<li>真实地面不平</li>
+<li>关节零位偏差</li>
+</ul>
+<p>解决思路：</p>
+<ul>
+<li>加入 actuator delay</li>
+<li>加入 motor strength randomization</li>
+<li>加入 observation noise</li>
+<li>加入 terrain randomization</li>
+<li>做 system identification</li>
+</ul>
+<h3 id="10-5-仿真项目无法复现"><a href="#10-5-仿真项目无法复现" class="headerlink" title="10.5 仿真项目无法复现"></a>10.5 仿真项目无法复现</h3><p>常见原因：</p>
+<ul>
+<li>随机种子没固定</li>
+<li>版本没记录</li>
+<li>配置文件没保存</li>
+<li>模型资产没提交</li>
+<li>训练参数只写在命令行里</li>
+</ul>
+<p>一个能写进履历的仿真项目，必须能被别人复现。</p>
+<hr>
+<h2 id="十一、前沿动态：2026-05-时点应该关注什么"><a href="#十一、前沿动态：2026-05-时点应该关注什么" class="headerlink" title="十一、前沿动态：2026-05 时点应该关注什么"></a>十一、前沿动态：2026-05 时点应该关注什么</h2><p>仿真生态更新很快，尤其是机器人学习方向。</p>
+<h3 id="11-1-Isaac-Lab-成为主流训练工作台之一"><a href="#11-1-Isaac-Lab-成为主流训练工作台之一" class="headerlink" title="11.1 Isaac Lab 成为主流训练工作台之一"></a>11.1 Isaac Lab 成为主流训练工作台之一</h3><p>Isaac Gym 曾经是腿式 RL 的重要工具。</p>
+<p>现在更值得跟的是 Isaac Lab。</p>
+<p>它更强调：</p>
+<ul>
+<li>任务组织</li>
+<li>资产管理</li>
+<li>环境配置</li>
+<li>可扩展训练流程</li>
+<li>与 Isaac Sim 生态衔接</li>
+</ul>
+<p>如果目标是四足、人形、操作任务的并行训练，Isaac Lab 是长期值得投入的工具。</p>
+<h3 id="11-2-MuJoCo-生态持续增强"><a href="#11-2-MuJoCo-生态持续增强" class="headerlink" title="11.2 MuJoCo 生态持续增强"></a>11.2 MuJoCo 生态持续增强</h3><p>MuJoCo 开源后，生态明显增强。</p>
+<p>现在除了核心 MuJoCo，还有：</p>
+<ul>
+<li>mujoco_menagerie</li>
+<li>MuJoCo Playground</li>
+<li>各类机器人学习环境</li>
+</ul>
+<p>它适合做轻量、稳定、可复现的机器人控制和 RL 实验。</p>
+<h3 id="11-3-Genesis-值得跟踪，但要看成熟度"><a href="#11-3-Genesis-值得跟踪，但要看成熟度" class="headerlink" title="11.3 Genesis 值得跟踪，但要看成熟度"></a>11.3 Genesis 值得跟踪，但要看成熟度</h3><p>Genesis 的关注点是高速仿真和统一物理框架。</p>
+<p>它很值得关注，但实际项目采用时要看：</p>
+<ul>
+<li>文档是否稳定</li>
+<li>API 是否变化频繁</li>
+<li>示例是否够多</li>
+<li>资产是否好接入</li>
+<li>与现有 RL 框架是否顺</li>
+</ul>
+<p>前沿工具可以跟，但履历项目最好建立在可复现基础上。</p>
+<h3 id="11-4-操作任务仿真越来越重要"><a href="#11-4-操作任务仿真越来越重要" class="headerlink" title="11.4 操作任务仿真越来越重要"></a>11.4 操作任务仿真越来越重要</h3><p>过去机器人 RL 很多集中在 locomotion。</p>
+<p>现在操作任务越来越重要：</p>
+<ul>
+<li>抓取</li>
+<li>开门</li>
+<li>抽屉</li>
+<li>插接</li>
+<li>工具使用</li>
+<li>移动操作</li>
+</ul>
+<p>ManiSkill、robosuite、SAPIEN、LeRobot 生态会越来越常被放到一起讨论。</p>
+<h3 id="11-5-仿真会和数据闭环结合"><a href="#11-5-仿真会和数据闭环结合" class="headerlink" title="11.5 仿真会和数据闭环结合"></a>11.5 仿真会和数据闭环结合</h3><p>未来的仿真不只是训练前的工具，也会进入数据闭环：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">real robot failure</span><br><span class="line">  -&gt; log replay</span><br><span class="line">  -&gt; simulation reconstruction</span><br><span class="line">  -&gt; policy update</span><br><span class="line">  -&gt; regression test</span><br><span class="line">  -&gt; redeploy</span><br></pre></td></tr></table></figure>
+
+<p>这也是机器人产品化最需要的能力之一。</p>
+<hr>
+<h2 id="十二、这一篇的核心结论"><a href="#十二、这一篇的核心结论" class="headerlink" title="十二、这一篇的核心结论"></a>十二、这一篇的核心结论</h2><p>机器人仿真不是“没有真机时的替代品”，而是机器人系统开发里的工程工作台。</p>
+<p>它承担四件事：</p>
+<ol>
+<li>在真机前暴露模型、控制、感知和规划问题。</li>
+<li>支撑强化学习和模仿学习的大规模数据生成。</li>
+<li>通过 domain randomization 和 system identification 缩小 Sim2Real 差距。</li>
+<li>作为部署后的回归测试系统，防止能力被改坏。</li>
+</ol>
+<p>一条完整仿真链路大致是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">URDF / MJCF / USD</span><br><span class="line">  -&gt; physics engine</span><br><span class="line">  -&gt; sensor simulation</span><br><span class="line">  -&gt; controller</span><br><span class="line">  -&gt; parallel training</span><br><span class="line">  -&gt; sim2real evaluation</span><br><span class="line">  -&gt; policy export</span><br><span class="line">  -&gt; regression test</span><br></pre></td></tr></table></figure>
+
+<p>如果你想把这一层做成有履历价值的项目，优先做三件事：</p>
+<ul>
+<li>从 URDF 到可运行仿真</li>
+<li>Isaac Lab 并行训练 baseline</li>
+<li>Sim2Real 风险分析</li>
+</ul>
+<p>只要能把这三件事讲清楚，你就不只是“会用仿真器”，而是理解机器人系统怎样在仿真里被建模、训练、验证和持续迭代。</p>
+<hr>
+<h2 id="系列导航"><a href="#系列导航" class="headerlink" title="系列导航"></a>系列导航</h2><p>本篇在系列中的位置：</p>
+<p><code>总路线图 -&gt; 数学基础 -&gt; 坐标系 -&gt; 运动学 -&gt; 概率滤波 -&gt; 感知与三维理解 -&gt; 机械臂控制 -&gt; 接触抓取 -&gt; 四足控制 -&gt; 人形控制基础 -&gt; 人形全身控制 -&gt; QP 实现 -&gt; 接触力分配 -&gt; 状态估计 -&gt; 仿真实战</code></p>
+<ul>
+<li>上一篇：<a href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1%EF%BC%9AIMU%E3%80%81%E8%B6%B3%E5%BA%95%E6%8E%A5%E8%A7%A6%E4%B8%8E%E6%B5%AE%E5%8A%A8%E5%9F%BA%E7%8A%B6%E6%80%81%E6%81%A2%E5%A4%8D/" title="人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复">人形机器人中的状态估计：IMU、足底接触与浮动基状态恢复</a></li>
+<li>下一篇：<a href="/2026/05/23/ROS2%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8Erosbag%E8%B0%83%E8%AF%95/" title="ROS 2 工程指南：节点、TF、控制环与 rosbag 调试">ROS 2 工程指南：节点、TF、控制环与 rosbag 调试</a></li>
+<li>回到总路线：<a href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</a></li>
+</ul>
+<link rel="stylesheet" href="/css/spoiler.css" type="text/css"><script src="/js/spoiler.js" type="text/javascript" async></script></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://LJS515.github.io/">YiQiu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://ljs515.github.io/2026/05/23/%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BB%BF%E7%9C%9F%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BB%8EURDF%E5%88%B0IsaacLab%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83/">https://ljs515.github.io/2026/05/23/%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BB%BF%E7%9C%9F%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BB%8EURDF%E5%88%B0IsaacLab%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://ljs515.github.io" target="_blank">YiQiuのblog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD/">具身智能</a><a class="post-meta__tags" href="/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA/">机器人</a><a class="post-meta__tags" href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/">开源项目</a><a class="post-meta__tags" href="/tags/Sim2Real/">Sim2Real</a><a class="post-meta__tags" href="/tags/Isaac-Lab/">Isaac Lab</a><a class="post-meta__tags" href="/tags/%E4%BB%BF%E7%9C%9F/">仿真</a><a class="post-meta__tags" href="/tags/MuJoCo/">MuJoCo</a></div><div class="post-share"><div class="social-share" data-image="/img/04.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>感谢您的支持</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechat.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wechat.jpg" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpg" alt="alipay"/></a><div class="post-qr-code-desc">alipay</div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related  no-desc" href="/2026/05/23/ROS2%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8Erosbag%E8%B0%83%E8%AF%95/" title="ROS 2 工程指南：节点、TF、控制环与 rosbag 调试"><img class="cover" src="/img/04.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">ROS 2 工程指南：节点、TF、控制环与 rosbag 调试</div></div></div></a><a class="pagination-related  no-desc" href="/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/" title="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示"><img class="cover" src="/img/04.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">具身智能中的感知与三维理解：相机、SLAM 与 3D 表示</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related no-desc" href="/2026/05/24/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E5%85%A5%E9%97%A8%EF%BC%9APPO%E3%80%81legged_gym%E4%B8%8ESim2Real/" title="机器人强化学习入门：PPO、legged_gym 与 Sim2Real"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-24</div><div class="info-item-2">机器人强化学习入门：PPO、legged_gym 与 Sim2Real</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/23/ROS2%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8Erosbag%E8%B0%83%E8%AF%95/" title="ROS 2 工程指南：节点、TF、控制环与 rosbag 调试"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-23</div><div class="info-item-2">ROS 2 工程指南：节点、TF、控制环与 rosbag 调试</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/" title="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-22</div><div class="info-item-2">具身智能中的感知与三维理解：相机、SLAM 与 3D 表示</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E5%AE%9E%E6%88%98%EF%BC%9ADiffusion%20Policy%E3%80%81ACT%E4%B8%8ELeRobot/" title="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="author-info-name">YiQiu</div><div class="author-info-description">专注于嵌入式技术研究 | ROS学习之路 | 深度学习&人工智能 | 算法研究</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">21</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">52</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" href="https://LJS515.github.io/"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/LJS515" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:3435583503@qq.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><style>
+.announcement-card {
+    --main-color: #ff00ff;
+    --secondary-color: #00ffff;
+    --highlight-color: #ff5500;
+    position: relative;
+    overflow: hidden;
+}
+.announcement-content {
+    font-size: 1rem; 
+    line-height: 1.2; 
+    color: #ffffff;
+    position: relative;
+}
+.keyword {
+    color: var(--secondary-color);
+    font-weight: 300;
+    font-size: 1.1rem; 
+}
+.highlight {
+    color: var(--main-color);
+    font-weight: 1000;
+    font-size: 1.2rem; 
+}
+.announcement-content ul {
+    list-style-type: none;
+    margin: 0.8rem 0; 
+    padding-left: 1.5rem;   
+}
+</style>
+<div class="announcement-card">
+    <div class="announcement-content">
+        <p><span class="highlight">欢迎来到「YiQiu」ROS&AI研习录</span>！🎉</p>
+        <p><strong>本平台专注于：</strong></p>
+        <ul>
+            <li><span class="keyword">> 嵌入式系统开发</span></li>
+            <li><span class="keyword">> ROS学习</span></li>
+            <li><span class="keyword">> 算法研究</span></li>
+            <li><span class="keyword">> 深度学习&人工智能</span></li>
+        </ul>
+        <p>🌟 <strong>加入我们，一起探索机器人的奥秘，提升AI实战能力，共同创造更美好的人工智能！</strong></p>
+    </div>
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BB%BF%E7%9C%9F%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BB%8E-URDF-%E5%88%B0-Isaac-Lab-%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83"><span class="toc-number">1.</span> <span class="toc-text">机器人仿真实战：从 URDF 到 Isaac Lab 并行训练</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%80%E5%AE%9A%E8%A6%81%E5%81%9A%E4%BB%BF%E7%9C%9F"><span class="toc-number">1.1.</span> <span class="toc-text">一、为什么机器人一定要做仿真</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E9%99%8D%E4%BD%8E%E8%AF%95%E9%94%99%E6%88%90%E6%9C%AC"><span class="toc-number">1.1.1.</span> <span class="toc-text">1.1 降低试错成本</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E8%AE%A9%E5%A4%B1%E8%B4%A5%E5%8F%AF%E9%87%8D%E5%A4%8D"><span class="toc-number">1.1.2.</span> <span class="toc-text">1.2 让失败可重复</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3-%E6%8F%90%E5%89%8D%E9%AA%8C%E8%AF%81%E7%B3%BB%E7%BB%9F%E7%BB%93%E6%9E%84"><span class="toc-number">1.1.3.</span> <span class="toc-text">1.3 提前验证系统结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-4-%E6%94%AF%E6%92%91%E5%A4%A7%E8%A7%84%E6%A8%A1%E8%AE%AD%E7%BB%83"><span class="toc-number">1.1.4.</span> <span class="toc-text">1.4 支撑大规模训练</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-5-%E5%BB%BA%E7%AB%8B%E9%83%A8%E7%BD%B2%E5%9B%9E%E5%BD%92%E6%9C%BA%E5%88%B6"><span class="toc-number">1.1.5.</span> <span class="toc-text">1.5 建立部署回归机制</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E4%BB%BF%E7%9C%9F%E4%B8%8D%E6%98%AF%E8%B6%8A%E7%9C%9F%E5%AE%9E%E8%B6%8A%E5%A5%BD%EF%BC%8C%E8%80%8C%E6%98%AF%E8%A6%81%E6%9C%8D%E5%8A%A1%E7%9B%AE%E6%A0%87"><span class="toc-number">1.2.</span> <span class="toc-text">二、仿真不是越真实越好，而是要服务目标</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E6%9C%BA%E6%A2%B0%E8%87%82%E8%BD%A8%E8%BF%B9%E6%8E%A7%E5%88%B6"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 机械臂轨迹控制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E6%8E%A5%E8%A7%A6%E6%8A%93%E5%8F%96"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 接触抓取</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-%E5%9B%9B%E8%B6%B3%E5%92%8C%E4%BA%BA%E5%BD%A2%E6%8E%A7%E5%88%B6"><span class="toc-number">1.2.3.</span> <span class="toc-text">2.3 四足和人形控制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%AD%A6%E4%B9%A0"><span class="toc-number">1.2.4.</span> <span class="toc-text">2.4 机器人学习</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E6%A8%A1%E5%9E%8B%E8%B5%84%E4%BA%A7%EF%BC%9AURDF%E3%80%81MJCF-%E5%92%8C-USD"><span class="toc-number">1.3.</span> <span class="toc-text">三、模型资产：URDF、MJCF 和 USD</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-URDF"><span class="toc-number">1.3.1.</span> <span class="toc-text">3.1 URDF</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-MJCF"><span class="toc-number">1.3.2.</span> <span class="toc-text">3.2 MJCF</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-USD"><span class="toc-number">1.3.3.</span> <span class="toc-text">3.3 USD</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-%E4%B8%89%E7%A7%8D%E6%A0%BC%E5%BC%8F%E6%80%8E%E4%B9%88%E9%80%89"><span class="toc-number">1.3.4.</span> <span class="toc-text">3.4 三种格式怎么选</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-%E6%9C%80%E5%B0%8F%E5%AE%9E%E8%B7%B5%E9%A1%B9%E7%9B%AE"><span class="toc-number">1.3.5.</span> <span class="toc-text">3.5 最小实践项目</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E4%B8%BB%E6%B5%81%E4%BB%BF%E7%9C%9F%E5%99%A8%E6%80%8E%E4%B9%88%E9%80%89"><span class="toc-number">1.4.</span> <span class="toc-text">四、主流仿真器怎么选</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-MuJoCo"><span class="toc-number">1.4.1.</span> <span class="toc-text">4.1 MuJoCo</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-Isaac-Sim-%E5%92%8C-Isaac-Lab"><span class="toc-number">1.4.2.</span> <span class="toc-text">4.2 Isaac Sim 和 Isaac Lab</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-Gazebo-gz-sim"><span class="toc-number">1.4.3.</span> <span class="toc-text">4.3 Gazebo &#x2F; gz-sim</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-Genesis"><span class="toc-number">1.4.4.</span> <span class="toc-text">4.4 Genesis</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-5-ManiSkill"><span class="toc-number">1.4.5.</span> <span class="toc-text">4.5 ManiSkill</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-6-Drake"><span class="toc-number">1.4.6.</span> <span class="toc-text">4.6 Drake</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E4%BB%BF%E7%9C%9F%E7%B3%BB%E7%BB%9F%E7%9A%84%E6%80%BB%E9%93%BE%E8%B7%AF"><span class="toc-number">1.5.</span> <span class="toc-text">五、仿真系统的总链路</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E6%A8%A1%E5%9E%8B%E8%B5%84%E4%BA%A7"><span class="toc-number">1.5.1.</span> <span class="toc-text">5.1 模型资产</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E7%89%A9%E7%90%86%E5%BC%95%E6%93%8E"><span class="toc-number">1.5.2.</span> <span class="toc-text">5.2 物理引擎</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E4%BC%A0%E6%84%9F%E5%99%A8%E4%BB%BF%E7%9C%9F"><span class="toc-number">1.5.3.</span> <span class="toc-text">5.3 传感器仿真</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-%E6%8E%A7%E5%88%B6%E5%99%A8"><span class="toc-number">1.5.4.</span> <span class="toc-text">5.4 控制器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5-%E8%AF%84%E4%BC%B0%E6%8C%87%E6%A0%87"><span class="toc-number">1.5.5.</span> <span class="toc-text">5.5 评估指标</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83%E4%B8%BA%E4%BB%80%E4%B9%88%E9%87%8D%E8%A6%81"><span class="toc-number">1.6.</span> <span class="toc-text">六、并行训练为什么重要</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E5%B9%B6%E8%A1%8C%E7%8E%AF%E5%A2%83%E9%95%BF%E4%BB%80%E4%B9%88%E6%A0%B7"><span class="toc-number">1.6.1.</span> <span class="toc-text">6.1 并行环境长什么样</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-legged-gym-%E7%9A%84%E6%84%8F%E4%B9%89"><span class="toc-number">1.6.2.</span> <span class="toc-text">6.2 legged_gym 的意义</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-Isaac-Lab-%E7%9A%84%E6%84%8F%E4%B9%89"><span class="toc-number">1.6.3.</span> <span class="toc-text">6.3 Isaac Lab 的意义</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4-MuJoCo-Playground-%E7%9A%84%E6%84%8F%E4%B9%89"><span class="toc-number">1.6.4.</span> <span class="toc-text">6.4 MuJoCo Playground 的意义</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81Sim2Real%EF%BC%9A%E4%BB%BF%E7%9C%9F%E5%88%B0%E7%9C%9F%E6%9C%BA%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E5%A4%B1%E8%B4%A5"><span class="toc-number">1.7.</span> <span class="toc-text">七、Sim2Real：仿真到真机为什么会失败</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-%E8%B4%A8%E9%87%8F%E5%92%8C%E6%83%AF%E9%87%8F%E5%81%8F%E5%B7%AE"><span class="toc-number">1.7.1.</span> <span class="toc-text">7.1 质量和惯量偏差</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-%E6%91%A9%E6%93%A6%E5%81%8F%E5%B7%AE"><span class="toc-number">1.7.2.</span> <span class="toc-text">7.2 摩擦偏差</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-%E6%89%A7%E8%A1%8C%E5%99%A8%E5%81%8F%E5%B7%AE"><span class="toc-number">1.7.3.</span> <span class="toc-text">7.3 执行器偏差</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4-%E4%BC%A0%E6%84%9F%E5%99%A8%E5%81%8F%E5%B7%AE"><span class="toc-number">1.7.4.</span> <span class="toc-text">7.4 传感器偏差</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-5-Domain-Randomization"><span class="toc-number">1.7.5.</span> <span class="toc-text">7.5 Domain Randomization</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-6-System-Identification"><span class="toc-number">1.7.6.</span> <span class="toc-text">7.6 System Identification</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE%E7%9F%A9%E9%98%B5"><span class="toc-number">1.8.</span> <span class="toc-text">八、开源项目矩阵</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-%E7%89%A9%E7%90%86%E4%BB%BF%E7%9C%9F"><span class="toc-number">1.8.1.</span> <span class="toc-text">8.1 物理仿真</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-%E8%B5%84%E4%BA%A7%E5%92%8C%E6%A8%A1%E5%9E%8B"><span class="toc-number">1.8.2.</span> <span class="toc-text">8.2 资产和模型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83"><span class="toc-number">1.8.3.</span> <span class="toc-text">8.3 并行训练</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-4-%E6%93%8D%E4%BD%9C%E4%BB%BB%E5%8A%A1"><span class="toc-number">1.8.4.</span> <span class="toc-text">8.4 操作任务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-5-%E5%B1%A5%E5%8E%86%E4%BA%A7%E5%87%BA"><span class="toc-number">1.8.5.</span> <span class="toc-text">8.5 履历产出</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E6%9C%80%E6%8E%A8%E8%8D%90%E5%81%9A%E7%9A%84%E4%B8%89%E4%B8%AA%E4%BB%BF%E7%9C%9F%E9%A1%B9%E7%9B%AE"><span class="toc-number">1.9.</span> <span class="toc-text">九、最推荐做的三个仿真项目</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-%E9%A1%B9%E7%9B%AE%E4%B8%80%EF%BC%9A%E4%BB%8E-URDF-%E5%88%B0%E5%8F%AF%E8%BF%90%E8%A1%8C%E4%BB%BF%E7%9C%9F"><span class="toc-number">1.9.1.</span> <span class="toc-text">9.1 项目一：从 URDF 到可运行仿真</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-%E9%A1%B9%E7%9B%AE%E4%BA%8C%EF%BC%9AIsaac-Lab-%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83-baseline"><span class="toc-number">1.9.2.</span> <span class="toc-text">9.2 项目二：Isaac Lab 并行训练 baseline</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-3-%E9%A1%B9%E7%9B%AE%E4%B8%89%EF%BC%9ASim2Real-%E9%A3%8E%E9%99%A9%E5%88%86%E6%9E%90"><span class="toc-number">1.9.3.</span> <span class="toc-text">9.3 项目三：Sim2Real 风险分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E5%B8%B8%E8%A7%81%E5%A4%B1%E6%95%88%E6%A8%A1%E5%BC%8F"><span class="toc-number">1.10.</span> <span class="toc-text">十、常见失效模式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-%E6%A8%A1%E5%9E%8B%E6%8E%89%E5%9C%B0%E6%88%96%E9%A3%9E%E5%A4%A9"><span class="toc-number">1.10.1.</span> <span class="toc-text">10.1 模型掉地或飞天</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-%E6%8E%A7%E5%88%B6%E5%99%A8%E5%9C%A8%E4%BB%BF%E7%9C%9F%E9%87%8C%E9%9C%87%E8%8D%A1"><span class="toc-number">1.10.2.</span> <span class="toc-text">10.2 控制器在仿真里震荡</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-3-%E8%AE%AD%E7%BB%83%E6%9B%B2%E7%BA%BF%E5%BE%88%E5%A5%BD%EF%BC%8C%E4%BD%86%E7%AD%96%E7%95%A5%E5%8A%A8%E4%BD%9C%E5%BE%88%E6%80%AA"><span class="toc-number">1.10.3.</span> <span class="toc-text">10.3 训练曲线很好，但策略动作很怪</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-4-%E4%BB%BF%E7%9C%9F%E9%87%8C%E8%83%BD%E8%B5%B0%EF%BC%8C%E7%9C%9F%E6%9C%BA%E4%B8%8A%E5%BE%88%E6%8A%96"><span class="toc-number">1.10.4.</span> <span class="toc-text">10.4 仿真里能走，真机上很抖</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-5-%E4%BB%BF%E7%9C%9F%E9%A1%B9%E7%9B%AE%E6%97%A0%E6%B3%95%E5%A4%8D%E7%8E%B0"><span class="toc-number">1.10.5.</span> <span class="toc-text">10.5 仿真项目无法复现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E5%89%8D%E6%B2%BF%E5%8A%A8%E6%80%81%EF%BC%9A2026-05-%E6%97%B6%E7%82%B9%E5%BA%94%E8%AF%A5%E5%85%B3%E6%B3%A8%E4%BB%80%E4%B9%88"><span class="toc-number">1.11.</span> <span class="toc-text">十一、前沿动态：2026-05 时点应该关注什么</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-Isaac-Lab-%E6%88%90%E4%B8%BA%E4%B8%BB%E6%B5%81%E8%AE%AD%E7%BB%83%E5%B7%A5%E4%BD%9C%E5%8F%B0%E4%B9%8B%E4%B8%80"><span class="toc-number">1.11.1.</span> <span class="toc-text">11.1 Isaac Lab 成为主流训练工作台之一</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-MuJoCo-%E7%94%9F%E6%80%81%E6%8C%81%E7%BB%AD%E5%A2%9E%E5%BC%BA"><span class="toc-number">1.11.2.</span> <span class="toc-text">11.2 MuJoCo 生态持续增强</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-3-Genesis-%E5%80%BC%E5%BE%97%E8%B7%9F%E8%B8%AA%EF%BC%8C%E4%BD%86%E8%A6%81%E7%9C%8B%E6%88%90%E7%86%9F%E5%BA%A6"><span class="toc-number">1.11.3.</span> <span class="toc-text">11.3 Genesis 值得跟踪，但要看成熟度</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-4-%E6%93%8D%E4%BD%9C%E4%BB%BB%E5%8A%A1%E4%BB%BF%E7%9C%9F%E8%B6%8A%E6%9D%A5%E8%B6%8A%E9%87%8D%E8%A6%81"><span class="toc-number">1.11.4.</span> <span class="toc-text">11.4 操作任务仿真越来越重要</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-5-%E4%BB%BF%E7%9C%9F%E4%BC%9A%E5%92%8C%E6%95%B0%E6%8D%AE%E9%97%AD%E7%8E%AF%E7%BB%93%E5%90%88"><span class="toc-number">1.11.5.</span> <span class="toc-text">11.5 仿真会和数据闭环结合</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81%E8%BF%99%E4%B8%80%E7%AF%87%E7%9A%84%E6%A0%B8%E5%BF%83%E7%BB%93%E8%AE%BA"><span class="toc-number">1.12.</span> <span class="toc-text">十二、这一篇的核心结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%B3%BB%E5%88%97%E5%AF%BC%E8%88%AA"><span class="toc-number">1.13.</span> <span class="toc-text">系列导航</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"/></a><div class="content"><a class="title" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</a><time datetime="2026-05-25T04:05:00.000Z" title="发表于 2026-05-25 12:05:00">2026-05-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E5%AE%9E%E6%88%98%EF%BC%9ADiffusion%20Policy%E3%80%81ACT%E4%B8%8ELeRobot/" title="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot"/></a><div class="content"><a class="title" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E5%AE%9E%E6%88%98%EF%BC%9ADiffusion%20Policy%E3%80%81ACT%E4%B8%8ELeRobot/" title="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot">机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot</a><time datetime="2026-05-25T02:45:00.000Z" title="发表于 2026-05-25 10:45:00">2026-05-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/05/24/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E5%85%A5%E9%97%A8%EF%BC%9APPO%E3%80%81legged_gym%E4%B8%8ESim2Real/" title="机器人强化学习入门：PPO、legged_gym 与 Sim2Real"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人强化学习入门：PPO、legged_gym 与 Sim2Real"/></a><div class="content"><a class="title" href="/2026/05/24/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E5%85%A5%E9%97%A8%EF%BC%9APPO%E3%80%81legged_gym%E4%B8%8ESim2Real/" title="机器人强化学习入门：PPO、legged_gym 与 Sim2Real">机器人强化学习入门：PPO、legged_gym 与 Sim2Real</a><time datetime="2026-05-24T02:40:00.000Z" title="发表于 2026-05-24 10:40:00">2026-05-24</time></div></div></div></div></div></div></main><footer id="footer" style="background-color: rgba(45, 10, 61, 0.2);"><div class="footer-other"><div class="footer-copyright"></div><div class="footer_custom_text"><style>
+  .footer {
+    text-align: center;
+    position: relative;
+  }
+  .social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .social-links i {
+    color: #8400ff;
+  }
+  .social-link {
+    color: #8a2be2;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: rgba(138, 43, 226, 0.1);
+  }
+  .social-link:hover {
+    color: #ffffff;
+    background: #892be2;
+    transform: translateY(-3px) scale(1.08);
+    box-shadow: 0 5px 15px rgba(138, 43, 226, 0.4);
+    text-decoration: none !important;
+  }
+  .footer p {
+    margin: 0.5rem 0;
+    line-height: 1.4;
+  }
+  .copyright {
+    font-size: 1.1rem;
+    color: #c08bdf;
+    font-weight: 400;
+  }
+  .tagline {
+    font-size: 0.8rem;
+    color: #8a2be2;
+    font-style: italic;
+    font-weight: 500;
+  }
+  .footer-note {
+    font-size: 0.78rem;
+    color: rgba(219, 142, 255, 0.8);
+  }
+</style>
+<div class="footer">
+  <div class="social-links">
+    <a href="https://github.com/LJS515" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+    <a href="https://blog.csdn.net/2401_84593538" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="CSDN" title="CSDN">
+      <i class="fas fa-code"></i>
+    </a>
+    <a href="https://www.xiaohongshu.com/user/profile/5e8a0aae0000000001002ce4" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="小红书" title="小红书">
+      <i class="fas fa-book"></i>
+    </a>
+    <a href="https://space.bilibili.com/1158177941" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="bilibili" title="bilibili">
+      <i class="fab fa-bilibili"></i>
+    </a>
+  </div>
+  <p class="copyright">© 2025 YiQiuのblog</p>
+  <p class="tagline">&gt; Stay curious, stay hacking, stay anime! &lt;</p>
+  <p class="footer-note">静态站点不再展示伪造访问量。后续如需真实统计，建议接入 Umami、Google Analytics 或 Cloudflare Web Analytics。</p>
+</div>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.2"></script><script src="/js/main.js?v=5.5.2"></script><div class="js-pjax"></div><script defer src="/js/cursor.js"></script><script src="/js/sakura.js"></script><meting-js class="no-destroy" id="8932390" server="netease" type="playlist" fixed="true" autoplay="true" order="random" volume="0.3" list-folded="false" list-max-height="36vh"> </meting-js><link rel="stylesheet" href="https://npm.elemecdn.com/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'"><script src="https://npm.elemecdn.com/aplayer/dist/APlayer.min.js"></script><script src="https://npm.elemecdn.com/meting/dist/Meting.min.js"></script><script>(() => {
+  const destroyAplayer = () => {
+    if (window.aplayers) {
+      for (let i = 0; i < window.aplayers.length; i++) {
+        if (!window.aplayers[i].options.fixed) {
+          window.aplayers[i].destroy()
+        }
+      }
+    }
+  }
+
+  const runMetingJS = () => {
+    typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+  }
+
+  btf.addGlobalFn('pjaxSend', destroyAplayer, 'destroyAplayer')
+  btf.addGlobalFn('pjaxComplete', loadMeting, 'runMetingJS')
+})()</script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      const usePjax = true
+      true
+        ? (usePjax ? pjax.loadUrl('/404.html') : window.location.href = '/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})()</script><script async data-pjax src="/"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词..." type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.2"></script></div></div><!-- hexo injector body_end start --><script data-pjax>
+  function butterfly_categories_card_injector_config(){
+    // 检查容器是否存在
+    var parent_div_git = document.getElementById('recent-posts');
+    // 如果容器不存在，则动态创建
+    if (!parent_div_git) {
+      console.warn('butterfly_categories_card: 挂载容器不存在，正在动态创建...');
+      // 创建新容器（默认插入到页面主体顶部）
+      parent_div_git = document.createElement('div');
+      parent_div_git.id = 'recent-posts'; // 赋予配置的ID
+      document.querySelector('#page').prepend(parent_div_git); // 插入到 #content-inner 内
+    }
+    var item_html = '<style>li.categoryBar-list-item{width:32.3%;}.categoryBar-list{max-height: 950px;overflow:auto;}.categoryBar-list::-webkit-scrollbar{width:0!important}@media screen and (max-width: 650px){.categoryBar-list{max-height: 800px;}}</style><div class="recent-post-item" style="height:auto;width:100%;padding:0px;"><div id="categoryBar"><ul class="categoryBar-list"><li class="categoryBar-list-item" style="background:url(/img/11.png);"> <a class="categoryBar-list-link" onclick="pjax.loadUrl(&quot;/categories/具身智能教程/&quot;);" href="javascript:void(0);">具身智能教程</a><span class="categoryBar-list-count">19</span><span class="categoryBar-list-descr">1</span></li></ul></div></div>';
+    console.log('已挂载 butterfly_categories_card');
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+  }
+  // 路径匹配逻辑（使用 startsWith）
+  if (location.pathname.startsWith('/categories/') || '/categories/' === 'all') {
+    butterfly_categories_card_injector_config();
+  }
+  </script><script data-pjax>
+  function butterfly_swiper_injector_config(){
+    var parent_div_git = document.getElementById('recent-posts');
+    var item_html = '<div class="recent-post-item" style="height: auto;width: 100%"><div class="blog-slider swiper-container-fade swiper-container-horizontal" id="swiper_container"><div class="blog-slider__wrp swiper-wrapper" style="transition-duration: 0ms;"></div><div class="blog-slider__pagination swiper-pagination-clickable swiper-pagination-bullets"></div></div></div>';
+    console.log('已挂载butterfly_swiper')
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+    }
+  var elist = 'undefined'.split(',');
+  var cpage = location.pathname;
+  var epage = '/';
+  var flag = 0;
+
+  for (var i=0;i<elist.length;i++){
+    if (cpage.includes(elist[i])){
+      flag++;
+    }
+  }
+
+  if ((epage ==='all')&&(flag == 0)){
+    butterfly_swiper_injector_config();
+  }
+  else if (epage === cpage){
+    butterfly_swiper_injector_config();
+  }
+  </script><script defer src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.js"></script><script defer data-pjax src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper_init.js"></script><!-- hexo injector body_end end --><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"right","width":200,"height":400},"mobile":{"show":true},"react":{"opacity":0.7},"log":false});</script></body></html>

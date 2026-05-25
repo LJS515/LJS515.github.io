@@ -1,0 +1,1055 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>ROS 2 工程指南：节点、TF、控制环与 rosbag 调试 | YiQiuのblog</title><meta name="author" content="YiQiu"><meta name="copyright" content="YiQiu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#f5f0fa"><meta name="description" content="ROS 2 工程指南：节点、TF、控制环与 rosbag 调试 前面我们已经讲到，机器人系统不是单一算法。 它至少包含：  传感器驱动 状态估计 感知与三维理解 运动规划 控制器 硬件接口 日志与调试 仿真和真机回归  这些模块如果只停留在各自的代码里，机器人是跑不起来的。 真正困难的是： 如何把这些模块组织成一个可运行、可调试、可复现、可上真机的系统。 这就是 ROS 2 的位置。 ROS 2">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ROS 2 工程指南：节点、TF、控制环与 rosbag 调试">
+<meta property="og:url" content="https://ljs515.github.io/2026/05/23/ROS2%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8Erosbag%E8%B0%83%E8%AF%95/index.html">
+<meta property="og:site_name" content="YiQiuのblog">
+<meta property="og:description" content="ROS 2 工程指南：节点、TF、控制环与 rosbag 调试 前面我们已经讲到，机器人系统不是单一算法。 它至少包含：  传感器驱动 状态估计 感知与三维理解 运动规划 控制器 硬件接口 日志与调试 仿真和真机回归  这些模块如果只停留在各自的代码里，机器人是跑不起来的。 真正困难的是： 如何把这些模块组织成一个可运行、可调试、可复现、可上真机的系统。 这就是 ROS 2 的位置。 ROS 2">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ljs515.github.io/img/04.png">
+<meta property="article:published_time" content="2026-05-23T04:55:00.000Z">
+<meta property="article:modified_time" content="2026-05-24T04:22:46.483Z">
+<meta property="article:author" content="YiQiu">
+<meta property="article:tag" content="具身智能">
+<meta property="article:tag" content="机器人">
+<meta property="article:tag" content="开源项目">
+<meta property="article:tag" content="ROS 2">
+<meta property="article:tag" content="中间件">
+<meta property="article:tag" content="ros2_control">
+<meta property="article:tag" content="调试">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ljs515.github.io/img/04.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "ROS 2 工程指南：节点、TF、控制环与 rosbag 调试",
+  "url": "https://ljs515.github.io/2026/05/23/ROS2%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8Erosbag%E8%B0%83%E8%AF%95/",
+  "image": "https://ljs515.github.io/img/04.png",
+  "datePublished": "2026-05-23T04:55:00.000Z",
+  "dateModified": "2026-05-24T04:22:46.483Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YiQiu",
+      "url": "https://LJS515.github.io/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/01.png"><link rel="canonical" href="https://ljs515.github.io/2026/05/23/ROS2%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8Erosbag%E8%B0%83%E8%AF%95/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.2"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#2d0a3d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f5f0fa')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chewy&amp;family=Ma+Shan+Zheng&amp;family=Fredoka+One&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":300,"languages":{"author":"作者: YiQiu","link":"链接: ","source":"来源: YiQiuのblog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'ROS 2 工程指南：节点、TF、控制环与 rosbag 调试',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Chewy&family=Fredoka+One&family=Caveat:wght@400;700&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet"><!-- hexo injector head_end start --><link rel="stylesheet" href="/css/categorybar.css"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiperstyle.css" media="print" onload="this.media='all'"><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-image: url(/img/03.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">21</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">52</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/04.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/img/01.png" alt="Logo"><span class="site-name">YiQiuのblog</span></a><a class="nav-page-title" href="/"><span class="site-name">ROS 2 工程指南：节点、TF、控制环与 rosbag 调试</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">ROS 2 工程指南：节点、TF、控制环与 rosbag 调试</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-05-23T04:55:00.000Z" title="发表于 2026-05-23 12:55:00">2026-05-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-05-24T04:22:46.483Z" title="更新于 2026-05-24 12:22:46">2026-05-24</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%95%99%E7%A8%8B/">具身智能教程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">5.4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>18分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div class="ai-summary"><div class="ai-explanation" style="display: block;" data-summary="这篇文章系统梳理 ROS 2 在机器人系统工程里的核心作用，重点讨论节点、Topic、Service、Action、QoS、TF2、ros2_control、Nav2、MoveIt 2、micro-ROS、rosbag2、Foxglove、PlotJuggler 等关键模块如何把感知、状态估计、规划、控制和硬件执行组织成一个可调试、可复现、可上真机的机器人系统。文章同时给出 ROS 2 版本选择、最小项目路线、常见失效模式、开源项目矩阵和履历表达方式。">YiQiuAI正在绞尽脑汁想思路ING···</div><div class="ai-title"> <div class="ai-title-left"> <i class="fa-brands fa-slack"></i><div class="ai-title-text">YiQiuのAI摘要</div></div><div class="ai-tag" id="ai-tag">HunYuan-Lite</div></div></div><div id="post-outdate-notice" data="{&quot;limitDay&quot;:365,&quot;messagePrev&quot;:&quot;本文最后更新于&quot;,&quot;messageNext&quot;:&quot;天前，部分内容可能已失效&quot;,&quot;postUpdate&quot;:&quot;2026-05-24 12:22:46&quot;}" hidden></div><h1 id="ROS-2-工程指南：节点、TF、控制环与-rosbag-调试"><a href="#ROS-2-工程指南：节点、TF、控制环与-rosbag-调试" class="headerlink" title="ROS 2 工程指南：节点、TF、控制环与 rosbag 调试"></a>ROS 2 工程指南：节点、TF、控制环与 rosbag 调试</h1><p><img src="/images/robotics-ros2/ros2-pipeline.png" alt="ROS 2 工程链路图"></p>
+<p>前面我们已经讲到，机器人系统不是单一算法。</p>
+<p>它至少包含：</p>
+<ul>
+<li>传感器驱动</li>
+<li>状态估计</li>
+<li>感知与三维理解</li>
+<li>运动规划</li>
+<li>控制器</li>
+<li>硬件接口</li>
+<li>日志与调试</li>
+<li>仿真和真机回归</li>
+</ul>
+<p>这些模块如果只停留在各自的代码里，机器人是跑不起来的。</p>
+<p>真正困难的是：</p>
+<p><strong>如何把这些模块组织成一个可运行、可调试、可复现、可上真机的系统。</strong></p>
+<p>这就是 ROS 2 的位置。</p>
+<p>ROS 2 不是“机器人算法”，而是机器人系统工程里的中间件和组织方式。它把不同节点、不同语言、不同频率、不同硬件、不同传感器连接起来，让一个复杂机器人系统能够被拆分、运行、观察和调试。</p>
+<p>它接在仿真实战之后，也连接后面的机器人学习、硬件部署和产品化。读完这一篇，你应该能理解 ROS 2 工程里最重要的几个问题：节点怎样通信，TF2 为什么是坐标系统的生命线，ros2_control 怎样组织控制环，rosbag2 为什么是调试核心，以及一个能写进履历的 ROS 2 项目应该长什么样。</p>
+<hr>
+<h2 id="一、ROS-2-到底解决什么问题"><a href="#一、ROS-2-到底解决什么问题" class="headerlink" title="一、ROS 2 到底解决什么问题"></a>一、ROS 2 到底解决什么问题</h2><p>很多初学者第一次接触 ROS 2，会把它理解成：</p>
+<p><strong>一个机器人代码框架。</strong></p>
+<p>这不算错，但太笼统。</p>
+<p>更工程化的理解是：</p>
+<p><strong>ROS 2 负责把机器人系统里的多个模块，组织成可以通信、同步、调试和部署的分布式系统。</strong></p>
+<h3 id="1-1-机器人为什么需要中间件"><a href="#1-1-机器人为什么需要中间件" class="headerlink" title="1.1 机器人为什么需要中间件"></a>1.1 机器人为什么需要中间件</h3><p>一台机器人里通常有很多程序同时运行。</p>
+<p>例如：</p>
+<ul>
+<li>相机驱动发布图像</li>
+<li>IMU 驱动发布角速度和加速度</li>
+<li>状态估计节点融合传感器</li>
+<li>SLAM 节点发布地图和位姿</li>
+<li>感知节点发布目标位置</li>
+<li>规划器发布轨迹</li>
+<li>控制器发布关节命令</li>
+<li>硬件接口读取电机状态</li>
+<li>日志系统录制 rosbag</li>
+</ul>
+<p>这些模块不可能都写在一个 main 函数里。</p>
+<p>你需要一套机制来处理：</p>
+<ul>
+<li>谁发布数据</li>
+<li>谁订阅数据</li>
+<li>数据频率是多少</li>
+<li>数据是否允许丢</li>
+<li>坐标系怎么管理</li>
+<li>出问题后怎么回放</li>
+<li>控制命令怎么送到硬件</li>
+</ul>
+<p>ROS 2 就是在解决这些系统组织问题。</p>
+<h3 id="1-2-ROS-2-和-ROS-1-的核心差异"><a href="#1-2-ROS-2-和-ROS-1-的核心差异" class="headerlink" title="1.2 ROS 2 和 ROS 1 的核心差异"></a>1.2 ROS 2 和 ROS 1 的核心差异</h3><p>ROS 1 影响力很大，但它的设计更偏研究原型。</p>
+<p>ROS 2 面向的是更现代的机器人系统，核心变化包括：</p>
+<ul>
+<li>基于 DDS 的通信</li>
+<li>更明确的 QoS 配置</li>
+<li>更好的多机器人和分布式支持</li>
+<li>更强的实时性扩展空间</li>
+<li>更正式的生命周期节点</li>
+<li>更适合工业和产品化场景</li>
+</ul>
+<p>简单说：</p>
+<p><strong>ROS 1 让机器人研究快速组合起来，ROS 2 更强调工程化、实时性、可部署和可扩展。</strong></p>
+<h3 id="1-3-2026-年该选哪个-ROS-2-版本"><a href="#1-3-2026-年该选哪个-ROS-2-版本" class="headerlink" title="1.3 2026 年该选哪个 ROS 2 版本"></a>1.3 2026 年该选哪个 ROS 2 版本</h3><p>截至 2026 年 5 月，ROS 2 新的 LTS 版本是 <a target="_blank" rel="noopener" href="https://docs.ros.org/en/lyrical/">Lyrical Luth</a>，官方文档显示它支持到 2031 年 5 月。</p>
+<p>同时，<a target="_blank" rel="noopener" href="https://docs.ros.org/en/jazzy/">Jazzy Jalisco</a> 仍然是一个非常重要的 LTS 版本，在大量教程、硬件包和工程项目里仍会继续使用。</p>
+<p>工程上不要盲目追最新版。</p>
+<p>更实用的选择逻辑是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">新项目 + 能接受新生态磨合 -&gt; Lyrical</span><br><span class="line">已有硬件 / 教程 / 驱动主要支持 Jazzy -&gt; Jazzy</span><br><span class="line">老项目迁移或 Ubuntu 22.04 生态 -&gt; Humble</span><br><span class="line">想跟踪最新 API -&gt; Rolling</span><br></pre></td></tr></table></figure>
+
+<p>如果你是学习和做作品集，优先选择文档、依赖和硬件支持最稳定的版本。</p>
+<p>真正重要的不是版本号，而是：</p>
+<p><strong>你的节点、TF、控制环、日志和部署流程是不是清楚。</strong></p>
+<hr>
+<h2 id="二、节点、Topic、Service-和-Action"><a href="#二、节点、Topic、Service-和-Action" class="headerlink" title="二、节点、Topic、Service 和 Action"></a>二、节点、Topic、Service 和 Action</h2><p>ROS 2 系统的基本单位是节点。</p>
+<p>一个节点通常负责一个明确功能。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">camera_driver</span><br><span class="line">imu_driver</span><br><span class="line">state_estimator</span><br><span class="line">object_detector</span><br><span class="line">motion_planner</span><br><span class="line">joint_controller</span><br><span class="line">hardware_interface</span><br></pre></td></tr></table></figure>
+
+<p>节点之间通过通信机制协作。</p>
+<h3 id="2-1-Topic：持续数据流"><a href="#2-1-Topic：持续数据流" class="headerlink" title="2.1 Topic：持续数据流"></a>2.1 Topic：持续数据流</h3><p>Topic 适合持续发布的数据。</p>
+<p>例如：</p>
+<ul>
+<li>图像</li>
+<li>点云</li>
+<li>IMU</li>
+<li>关节状态</li>
+<li>里程计</li>
+<li>控制命令</li>
+</ul>
+<p>典型模式是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">publisher -&gt; topic -&gt; subscriber</span><br></pre></td></tr></table></figure>
+
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">/camera/image_raw</span><br><span class="line">/imu/data</span><br><span class="line">/joint_states</span><br><span class="line">/cmd_vel</span><br><span class="line">/odom</span><br></pre></td></tr></table></figure>
+
+<p>Topic 的核心特点是：</p>
+<p><strong>数据持续流动，订阅者拿到最新数据后自己处理。</strong></p>
+<h3 id="2-2-Service：请求和响应"><a href="#2-2-Service：请求和响应" class="headerlink" title="2.2 Service：请求和响应"></a>2.2 Service：请求和响应</h3><p>Service 适合一次性请求。</p>
+<p>例如：</p>
+<ul>
+<li>重置机器人</li>
+<li>开关传感器</li>
+<li>查询参数</li>
+<li>触发标定</li>
+<li>切换模式</li>
+</ul>
+<p>典型模式是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">request -&gt; service -&gt; response</span><br></pre></td></tr></table></figure>
+
+<p>Service 不适合长时间任务。</p>
+<p>如果任务要执行几秒甚至几分钟，应该用 Action。</p>
+<h3 id="2-3-Action：长时间任务"><a href="#2-3-Action：长时间任务" class="headerlink" title="2.3 Action：长时间任务"></a>2.3 Action：长时间任务</h3><p>Action 适合可持续执行、可反馈、可取消的任务。</p>
+<p>例如：</p>
+<ul>
+<li>导航到目标点</li>
+<li>机械臂执行轨迹</li>
+<li>抓取一个物体</li>
+<li>巡检一段路线</li>
+</ul>
+<p>Action 的特点是：</p>
+<ul>
+<li>有 goal</li>
+<li>有 feedback</li>
+<li>有 result</li>
+<li>可以 cancel</li>
+</ul>
+<p>Nav2 和 MoveIt 2 这类系统都大量使用 Action。</p>
+<h3 id="2-4-三者怎么选"><a href="#2-4-三者怎么选" class="headerlink" title="2.4 三者怎么选"></a>2.4 三者怎么选</h3><p>一个实用判断是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">持续数据 -&gt; Topic</span><br><span class="line">短请求 -&gt; Service</span><br><span class="line">长任务 -&gt; Action</span><br></pre></td></tr></table></figure>
+
+<p>不要把所有东西都做成 Topic。</p>
+<p>也不要用 Service 执行长时间任务。</p>
+<p>这是 ROS 2 系统设计里最基础但很重要的工程判断。</p>
+<hr>
+<h2 id="三、QoS：为什么消息有时会收不到"><a href="#三、QoS：为什么消息有时会收不到" class="headerlink" title="三、QoS：为什么消息有时会收不到"></a>三、QoS：为什么消息有时会收不到</h2><p>ROS 2 里最容易让初学者困惑的问题之一是：</p>
+<p><strong>明明 topic 存在，为什么收不到消息。</strong></p>
+<p>很多时候不是代码错了，而是 QoS 不匹配。</p>
+<p>QoS 是 Quality of Service。</p>
+<p>它决定消息通信的行为。</p>
+<h3 id="3-1-reliability"><a href="#3-1-reliability" class="headerlink" title="3.1 reliability"></a>3.1 reliability</h3><p>reliability 决定消息是否必须可靠送达。</p>
+<p>常见配置：</p>
+<ul>
+<li>reliable</li>
+<li>best effort</li>
+</ul>
+<p>传感器数据很多时候会用 best effort。</p>
+<p>控制命令和关键状态可能需要 reliable。</p>
+<h3 id="3-2-durability"><a href="#3-2-durability" class="headerlink" title="3.2 durability"></a>3.2 durability</h3><p>durability 决定新订阅者是否能收到过去的消息。</p>
+<p>例如地图、静态参数这类数据，有时希望后启动的节点也能收到。</p>
+<h3 id="3-3-history-和-depth"><a href="#3-3-history-和-depth" class="headerlink" title="3.3 history 和 depth"></a>3.3 history 和 depth</h3><p>history 和 depth 决定消息队列保留多少历史数据。</p>
+<p>如果 depth 太小，处理慢的订阅者可能丢数据。</p>
+<p>如果 depth 太大，系统延迟可能积累。</p>
+<h3 id="3-4-deadline-和-liveliness"><a href="#3-4-deadline-和-liveliness" class="headerlink" title="3.4 deadline 和 liveliness"></a>3.4 deadline 和 liveliness</h3><p>这些配置常用于更严格的工程系统。</p>
+<p>例如你希望某个传感器必须每 10 ms 发布一次，如果超时就触发异常。</p>
+<h3 id="3-5-QoS-的工程建议"><a href="#3-5-QoS-的工程建议" class="headerlink" title="3.5 QoS 的工程建议"></a>3.5 QoS 的工程建议</h3><p>经验上可以这样理解：</p>
+<ul>
+<li>高频传感器：允许少量丢包，但要低延迟。</li>
+<li>控制命令：要稳定送达，但更要避免过期命令积压。</li>
+<li>地图和静态数据：希望后启动节点也能拿到。</li>
+<li>调试日志：可以重一点，但不要影响控制环。</li>
+</ul>
+<p>QoS 配不好，系统会出现很多“玄学问题”。</p>
+<p>比如：</p>
+<ul>
+<li>RViz2 看不到点云</li>
+<li>rosbag2 录不到某些 topic</li>
+<li>节点明明运行但没有回调</li>
+<li>仿真能跑，真机高频传感器就丢数据</li>
+</ul>
+<p>所以做 ROS 2 项目时，一定要把 QoS 写进调试清单。</p>
+<hr>
+<h2 id="四、TF2：机器人坐标链的生命线"><a href="#四、TF2：机器人坐标链的生命线" class="headerlink" title="四、TF2：机器人坐标链的生命线"></a>四、TF2：机器人坐标链的生命线</h2><p>如果 ROS 2 系统里只能优先学一个工具，我会选 TF2。</p>
+<p>因为机器人系统最终一定会遇到这个问题：</p>
+<p><strong>一个数据到底在哪个坐标系里。</strong></p>
+<h3 id="4-1-TF2-管什么"><a href="#4-1-TF2-管什么" class="headerlink" title="4.1 TF2 管什么"></a>4.1 TF2 管什么</h3><p>TF2 管理坐标系之间的变换。</p>
+<p>常见坐标系包括：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">map</span><br><span class="line">odom</span><br><span class="line">base_link</span><br><span class="line">camera_link</span><br><span class="line">laser</span><br><span class="line">imu_link</span><br><span class="line">tool0</span><br><span class="line">gripper</span><br></pre></td></tr></table></figure>
+
+<p>这些坐标系之间形成一棵树。</p>
+<p>例如移动机器人常见结构是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">map -&gt; odom -&gt; base_link -&gt; laser</span><br><span class="line">                       -&gt; camera_link</span><br><span class="line">                       -&gt; imu_link</span><br></pre></td></tr></table></figure>
+
+<p>机械臂常见结构是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">world -&gt; base_link -&gt; joint links -&gt; tool0 -&gt; gripper</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-map、odom-和-base-link"><a href="#4-2-map、odom-和-base-link" class="headerlink" title="4.2 map、odom 和 base_link"></a>4.2 map、odom 和 base_link</h3><p>移动机器人里最容易混的是这三个。</p>
+<p><code>map</code> 通常是全局地图坐标系。</p>
+<p><code>odom</code> 通常是连续但会漂移的局部里程计坐标系。</p>
+<p><code>base_link</code> 是机器人本体坐标系。</p>
+<p>常见关系是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">map -&gt; odom -&gt; base_link</span><br></pre></td></tr></table></figure>
+
+<p>SLAM 或定位系统通常发布 <code>map -&gt; odom</code>。</p>
+<p>里程计或状态估计通常发布 <code>odom -&gt; base_link</code>。</p>
+<p>如果这条链混乱，导航、感知和控制都会出问题。</p>
+<h3 id="4-3-静态-TF-和动态-TF"><a href="#4-3-静态-TF-和动态-TF" class="headerlink" title="4.3 静态 TF 和动态 TF"></a>4.3 静态 TF 和动态 TF</h3><p>静态 TF 用于不随时间变化的外参。</p>
+<p>例如：</p>
+<ul>
+<li>base_link 到 camera_link</li>
+<li>base_link 到 laser</li>
+<li>wrist_link 到 gripper</li>
+</ul>
+<p>动态 TF 用于随时间变化的位姿。</p>
+<p>例如：</p>
+<ul>
+<li>odom 到 base_link</li>
+<li>base_link 到机械臂各关节</li>
+<li>map 到 odom</li>
+</ul>
+<p>静态外参如果错了，机器人会长期偏。</p>
+<p>动态 TF 如果延迟，控制和感知会抖。</p>
+<h3 id="4-4-TF-常见问题"><a href="#4-4-TF-常见问题" class="headerlink" title="4.4 TF 常见问题"></a>4.4 TF 常见问题</h3><p>常见报错包括：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Lookup would require extrapolation into the future</span><br><span class="line">Could not transform from source frame to target frame</span><br><span class="line">No transform from map to base_link</span><br></pre></td></tr></table></figure>
+
+<p>这些问题通常来自：</p>
+<ul>
+<li>frame id 写错</li>
+<li>时间戳不一致</li>
+<li>TF 发布频率太低</li>
+<li>静态 TF 没启动</li>
+<li>坐标树断开</li>
+<li>多个节点发布同一条 TF</li>
+</ul>
+<p>TF 问题不解决，后面所有感知、导航、抓取都会变成猜谜。</p>
+<hr>
+<h2 id="五、ros2-control：控制环和硬件接口"><a href="#五、ros2-control：控制环和硬件接口" class="headerlink" title="五、ros2_control：控制环和硬件接口"></a>五、ros2_control：控制环和硬件接口</h2><p>ROS 2 真正接近机器人执行层时，会遇到 <a target="_blank" rel="noopener" href="https://github.com/ros-controls/ros2_control">ros2_control</a>。</p>
+<p>它解决的是：</p>
+<p><strong>控制器怎样以统一方式连接仿真和真机硬件。</strong></p>
+<h3 id="5-1-ros2-control-的核心结构"><a href="#5-1-ros2-control-的核心结构" class="headerlink" title="5.1 ros2_control 的核心结构"></a>5.1 ros2_control 的核心结构</h3><p>ros2_control 通常包括：</p>
+<ul>
+<li>hardware interface</li>
+<li>controller manager</li>
+<li>controller</li>
+<li>joint state broadcaster</li>
+<li>command interface</li>
+<li>state interface</li>
+</ul>
+<p>可以粗略理解为：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">controller</span><br><span class="line">  -&gt; command interface</span><br><span class="line">  -&gt; hardware interface</span><br><span class="line">  -&gt; motor driver</span><br><span class="line"></span><br><span class="line">hardware state</span><br><span class="line">  -&gt; state interface</span><br><span class="line">  -&gt; joint_state_broadcaster</span><br><span class="line">  -&gt; /joint_states</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-hardware-interface"><a href="#5-2-hardware-interface" class="headerlink" title="5.2 hardware interface"></a>5.2 hardware interface</h3><p>hardware interface 是连接真实硬件或仿真硬件的层。</p>
+<p>它负责：</p>
+<ul>
+<li>读取关节位置</li>
+<li>读取关节速度</li>
+<li>读取力矩或电流</li>
+<li>写入位置命令</li>
+<li>写入速度命令</li>
+<li>写入力矩命令</li>
+</ul>
+<p>如果你想让同一个控制器既能跑仿真又能跑真机，hardware interface 的设计很关键。</p>
+<h3 id="5-3-controller-manager"><a href="#5-3-controller-manager" class="headerlink" title="5.3 controller_manager"></a>5.3 controller_manager</h3><p>controller_manager 负责加载、启动、停止控制器。</p>
+<p>例如：</p>
+<ul>
+<li>joint_state_broadcaster</li>
+<li>joint_trajectory_controller</li>
+<li>diff_drive_controller</li>
+<li>effort_controller</li>
+</ul>
+<p>很多控制问题其实不是算法问题，而是 controller 没正确加载、接口名不匹配、生命周期状态不对。</p>
+<h3 id="5-4-控制频率"><a href="#5-4-控制频率" class="headerlink" title="5.4 控制频率"></a>5.4 控制频率</h3><p>控制频率是 ros2_control 项目里非常重要的参数。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">update_rate: 500</span><br></pre></td></tr></table></figure>
+
+<p>如果控制频率太低，机器人动作会滞后。</p>
+<p>如果控制频率太高，但系统实时性跟不上，就会出现抖动。</p>
+<p>真实工程里要关注：</p>
+<ul>
+<li>update loop 是否稳定</li>
+<li>read &#x2F; write 是否超时</li>
+<li>是否有内存分配</li>
+<li>是否被其他节点阻塞</li>
+<li>是否需要 Preempt-RT</li>
+</ul>
+<h3 id="5-5-ros2-control-最小项目"><a href="#5-5-ros2-control-最小项目" class="headerlink" title="5.5 ros2_control 最小项目"></a>5.5 ros2_control 最小项目</h3><p>一个很适合履历的项目是：</p>
+<ol>
+<li>用 URDF 定义一个两轮差速底盘或二自由度机械臂。</li>
+<li>接入 ros2_control。</li>
+<li>启动 joint_state_broadcaster。</li>
+<li>启动一个位置或速度控制器。</li>
+<li>在仿真里跑通。</li>
+<li>再换一个 mock hardware 或真实串口驱动。</li>
+</ol>
+<p>履历表达可以写成：</p>
+<ul>
+<li>基于 ros2_control 搭建机器人控制链路，完成 hardware interface、controller_manager、joint_state_broadcaster 和控制器配置，实现仿真与硬件接口的统一切换。</li>
+</ul>
+<hr>
+<h2 id="六、Nav2-和-MoveIt-2：导航与机械臂规划"><a href="#六、Nav2-和-MoveIt-2：导航与机械臂规划" class="headerlink" title="六、Nav2 和 MoveIt 2：导航与机械臂规划"></a>六、Nav2 和 MoveIt 2：导航与机械臂规划</h2><p>ROS 2 生态里，两个最重要的上层框架是：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/ros-navigation/navigation2">Nav2</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/moveit/moveit2">MoveIt 2</a></li>
+</ul>
+<p>它们分别对应移动机器人和机械臂。</p>
+<h3 id="6-1-Nav2-解决什么问题"><a href="#6-1-Nav2-解决什么问题" class="headerlink" title="6.1 Nav2 解决什么问题"></a>6.1 Nav2 解决什么问题</h3><p>Nav2 负责移动机器人导航。</p>
+<p>它通常包含：</p>
+<ul>
+<li>地图</li>
+<li>定位</li>
+<li>行为树</li>
+<li>全局规划</li>
+<li>局部规划</li>
+<li>代价地图</li>
+<li>控制器</li>
+<li>恢复行为</li>
+</ul>
+<p>一条导航任务不是“发个目标点”这么简单。</p>
+<p>它背后有：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">goal pose</span><br><span class="line">  -&gt; behavior tree</span><br><span class="line">  -&gt; global planner</span><br><span class="line">  -&gt; local controller</span><br><span class="line">  -&gt; costmap</span><br><span class="line">  -&gt; recovery behavior</span><br><span class="line">  -&gt; cmd_vel</span><br></pre></td></tr></table></figure>
+
+<p>如果你做移动机器人，Nav2 是必须认真学的项目。</p>
+<h3 id="6-2-MoveIt-2-解决什么问题"><a href="#6-2-MoveIt-2-解决什么问题" class="headerlink" title="6.2 MoveIt 2 解决什么问题"></a>6.2 MoveIt 2 解决什么问题</h3><p>MoveIt 2 负责机械臂运动规划和操作任务。</p>
+<p>它通常包含：</p>
+<ul>
+<li>机器人模型</li>
+<li>运动学插件</li>
+<li>碰撞检测</li>
+<li>规划器</li>
+<li>轨迹执行</li>
+<li>Planning Scene</li>
+<li>与 ros2_control 对接</li>
+</ul>
+<p>MoveIt 2 的典型任务是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">target pose</span><br><span class="line">  -&gt; IK</span><br><span class="line">  -&gt; collision checking</span><br><span class="line">  -&gt; motion planning</span><br><span class="line">  -&gt; trajectory execution</span><br></pre></td></tr></table></figure>
+
+<p>它不是控制器本身，而是规划和执行管理框架。</p>
+<h3 id="6-3-OMPL-和-Behavior-Tree"><a href="#6-3-OMPL-和-Behavior-Tree" class="headerlink" title="6.3 OMPL 和 Behavior Tree"></a>6.3 OMPL 和 Behavior Tree</h3><p>OMPL 常用于运动规划。</p>
+<p>Behavior Tree 在 Nav2 里非常重要。</p>
+<p>行为树的价值是：</p>
+<p><strong>把复杂任务拆成可组合、可回退、可观察的行为结构。</strong></p>
+<p>机器人不是只执行一个动作，而是要处理失败。</p>
+<p>例如导航里：</p>
+<ul>
+<li>到不了目标</li>
+<li>局部避障失败</li>
+<li>路径被堵</li>
+<li>机器人卡住</li>
+</ul>
+<p>行为树让这些恢复逻辑更清楚。</p>
+<hr>
+<h2 id="七、rosbag2：机器人调试的核心工具"><a href="#七、rosbag2：机器人调试的核心工具" class="headerlink" title="七、rosbag2：机器人调试的核心工具"></a>七、rosbag2：机器人调试的核心工具</h2><p>机器人调试里最重要的工具之一是 rosbag2。</p>
+<p>因为真机问题往往发生在现场。</p>
+<p>你不可能每次都让问题实时重演。</p>
+<p>所以必须记录数据。</p>
+<h3 id="7-1-rosbag2-记录什么"><a href="#7-1-rosbag2-记录什么" class="headerlink" title="7.1 rosbag2 记录什么"></a>7.1 rosbag2 记录什么</h3><p>常见记录内容包括：</p>
+<ul>
+<li><code>/tf</code></li>
+<li><code>/tf_static</code></li>
+<li><code>/joint_states</code></li>
+<li><code>/odom</code></li>
+<li><code>/imu/data</code></li>
+<li><code>/camera/image_raw</code></li>
+<li><code>/points</code></li>
+<li><code>/cmd_vel</code></li>
+<li><code>/scan</code></li>
+<li>控制器状态</li>
+<li>规划器输出</li>
+</ul>
+<p>一个好的 rosbag 能让你离线复现问题。</p>
+<h3 id="7-2-为什么不要什么都录"><a href="#7-2-为什么不要什么都录" class="headerlink" title="7.2 为什么不要什么都录"></a>7.2 为什么不要什么都录</h3><p>rosbag2 可以录很多 topic，但不是越多越好。</p>
+<p>高频图像和点云会让 bag 非常大。</p>
+<p>如果磁盘写入跟不上，还可能影响系统运行。</p>
+<p>所以要分层记录：</p>
+<ul>
+<li>常规日志：状态、控制命令、TF、关键 topic。</li>
+<li>复现日志：加上图像、点云、调试输出。</li>
+<li>深度排查：短时间全量记录。</li>
+</ul>
+<h3 id="7-3-回放比实时看更重要"><a href="#7-3-回放比实时看更重要" class="headerlink" title="7.3 回放比实时看更重要"></a>7.3 回放比实时看更重要</h3><p>很多问题实时看不清。</p>
+<p>回放时可以：</p>
+<ul>
+<li>降速播放</li>
+<li>重复播放</li>
+<li>对比多个版本</li>
+<li>离线跑新算法</li>
+<li>用 Foxglove 可视化</li>
+<li>用 PlotJuggler 看曲线</li>
+</ul>
+<p>真正工程化的机器人团队，一定会非常依赖数据回放。</p>
+<h3 id="7-4-rosbag2-最小项目"><a href="#7-4-rosbag2-最小项目" class="headerlink" title="7.4 rosbag2 最小项目"></a>7.4 rosbag2 最小项目</h3><p>建议做一个“故障复现”项目：</p>
+<ol>
+<li>在仿真或真机里制造一次导航失败。</li>
+<li>录制 <code>/tf</code>、<code>/odom</code>、<code>/cmd_vel</code>、<code>/scan</code>。</li>
+<li>用 rosbag2 回放。</li>
+<li>用 Foxglove 看轨迹和传感器。</li>
+<li>用 PlotJuggler 看速度和控制命令曲线。</li>
+<li>写一份失败复盘。</li>
+</ol>
+<p>履历表达可以写成：</p>
+<ul>
+<li>基于 rosbag2、Foxglove 和 PlotJuggler 建立机器人调试流程，完成导航失败场景的数据录制、回放分析和控制命令曲线复盘。</li>
+</ul>
+<hr>
+<h2 id="八、开源项目矩阵"><a href="#八、开源项目矩阵" class="headerlink" title="八、开源项目矩阵"></a>八、开源项目矩阵</h2><p><img src="/images/robotics-ros2/project-matrix.png" alt="ROS 2 工程项目矩阵"></p>
+<p>ROS 2 工程方向不要只学 API。</p>
+<p>更好的方式是按系统层级做项目。</p>
+<h3 id="8-1-核心通信"><a href="#8-1-核心通信" class="headerlink" title="8.1 核心通信"></a>8.1 核心通信</h3><p>重点：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/ros2/rclcpp">rclcpp</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/ros2/rclpy">rclpy</a></li>
+<li>DDS</li>
+<li>TF2</li>
+<li>launch</li>
+<li>parameters</li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>C++ 节点</li>
+<li>Python 节点</li>
+<li>Topic &#x2F; Service &#x2F; Action</li>
+<li>QoS 对比</li>
+<li>launch 组织</li>
+<li>参数配置</li>
+</ul>
+<h3 id="8-2-控制框架"><a href="#8-2-控制框架" class="headerlink" title="8.2 控制框架"></a>8.2 控制框架</h3><p>重点：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/ros-controls/ros2_control">ros2_control</a></li>
+<li>controller_manager</li>
+<li>joint_state_broadcaster</li>
+<li>joint_trajectory_controller</li>
+<li>diff_drive_controller</li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>机械臂控制链路</li>
+<li>差速底盘控制</li>
+<li>仿真硬件切换</li>
+<li>真机 hardware interface</li>
+<li>控制器生命周期管理</li>
+</ul>
+<h3 id="8-3-规划导航"><a href="#8-3-规划导航" class="headerlink" title="8.3 规划导航"></a>8.3 规划导航</h3><p>重点：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/ros-navigation/navigation2">Nav2</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/moveit/moveit2">MoveIt 2</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/ompl/ompl">OMPL</a></li>
+<li>BehaviorTree.CPP</li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>移动机器人导航</li>
+<li>机械臂规划</li>
+<li>代价地图调参</li>
+<li>轨迹执行</li>
+<li>恢复行为设计</li>
+</ul>
+<h3 id="8-4-嵌入式接入"><a href="#8-4-嵌入式接入" class="headerlink" title="8.4 嵌入式接入"></a>8.4 嵌入式接入</h3><p>重点：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/micro-ROS/micro_ros_setup">micro-ROS</a></li>
+<li>FreeRTOS</li>
+<li>Zephyr</li>
+<li>串口 &#x2F; CAN &#x2F; EtherCAT 桥接</li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>MCU 发布传感器数据</li>
+<li>下位机接收控制命令</li>
+<li>ROS 2 到硬件总线桥接</li>
+<li>简单驱动节点</li>
+</ul>
+<h3 id="8-5-调试工具"><a href="#8-5-调试工具" class="headerlink" title="8.5 调试工具"></a>8.5 调试工具</h3><p>重点：</p>
+<ul>
+<li>rosbag2</li>
+<li><a target="_blank" rel="noopener" href="https://github.com/foxglove">Foxglove</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/facontidavide/PlotJuggler">PlotJuggler</a></li>
+<li>RViz2</li>
+<li>rqt</li>
+</ul>
+<p>适合做：</p>
+<ul>
+<li>数据录制</li>
+<li>离线回放</li>
+<li>TF 可视化</li>
+<li>控制曲线分析</li>
+<li>失败案例复盘</li>
+</ul>
+<hr>
+<h2 id="九、最推荐做的三个-ROS-2-项目"><a href="#九、最推荐做的三个-ROS-2-项目" class="headerlink" title="九、最推荐做的三个 ROS 2 项目"></a>九、最推荐做的三个 ROS 2 项目</h2><p>如果你想把 ROS 2 写进履历，建议不要只写“熟悉 ROS 2”。</p>
+<p>要做出可展示的系统。</p>
+<h3 id="9-1-项目一：多传感器数据流与-TF-树"><a href="#9-1-项目一：多传感器数据流与-TF-树" class="headerlink" title="9.1 项目一：多传感器数据流与 TF 树"></a>9.1 项目一：多传感器数据流与 TF 树</h3><p>目标：</p>
+<p><strong>搭建一个最小机器人状态发布系统。</strong></p>
+<p>技术链路：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sensor node</span><br><span class="line">  -&gt; topic</span><br><span class="line">  -&gt; TF2</span><br><span class="line">  -&gt; visualization</span><br><span class="line">  -&gt; rosbag2</span><br></pre></td></tr></table></figure>
+
+<p>最小实现：</p>
+<ol>
+<li>写一个 IMU 模拟节点。</li>
+<li>写一个 encoder &#x2F; joint state 模拟节点。</li>
+<li>发布 <code>base_link</code>、<code>imu_link</code>、<code>wheel_link</code> 等 TF。</li>
+<li>在 RViz2 里可视化。</li>
+<li>用 rosbag2 记录并回放。</li>
+</ol>
+<p>履历表达：</p>
+<ul>
+<li>基于 ROS 2 构建多传感器数据流和 TF2 坐标链，完成 Topic 通信、静态 &#x2F; 动态 TF 发布、RViz2 可视化和 rosbag2 回放验证。</li>
+</ul>
+<h3 id="9-2-项目二：ros2-control-差速底盘或机械臂"><a href="#9-2-项目二：ros2-control-差速底盘或机械臂" class="headerlink" title="9.2 项目二：ros2_control 差速底盘或机械臂"></a>9.2 项目二：ros2_control 差速底盘或机械臂</h3><p>目标：</p>
+<p><strong>把控制器、硬件接口和状态发布打通。</strong></p>
+<p>技术链路：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">URDF</span><br><span class="line">  -&gt; ros2_control</span><br><span class="line">  -&gt; controller_manager</span><br><span class="line">  -&gt; joint_state_broadcaster</span><br><span class="line">  -&gt; controller</span><br><span class="line">  -&gt; hardware interface</span><br></pre></td></tr></table></figure>
+
+<p>最小实现：</p>
+<ol>
+<li>写一个简单 URDF。</li>
+<li>加入 ros2_control 标签。</li>
+<li>配置 joint_state_broadcaster。</li>
+<li>配置 diff_drive_controller 或 joint_trajectory_controller。</li>
+<li>在仿真里跑通。</li>
+<li>如果有硬件，替换成真实 hardware interface。</li>
+</ol>
+<p>履历表达：</p>
+<ul>
+<li>基于 ros2_control 完成差速底盘 &#x2F; 机械臂控制系统，包含 URDF 建模、controller_manager 配置、joint state 发布、控制器加载和硬件接口抽象。</li>
+</ul>
+<h3 id="9-3-项目三：Nav2-导航失败复盘"><a href="#9-3-项目三：Nav2-导航失败复盘" class="headerlink" title="9.3 项目三：Nav2 导航失败复盘"></a>9.3 项目三：Nav2 导航失败复盘</h3><p>目标：</p>
+<p><strong>不是只让机器人走到目标，而是能解释为什么走不到。</strong></p>
+<p>技术链路：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">map</span><br><span class="line">  -&gt; localization</span><br><span class="line">  -&gt; Nav2</span><br><span class="line">  -&gt; costmap</span><br><span class="line">  -&gt; cmd_vel</span><br><span class="line">  -&gt; rosbag2</span><br><span class="line">  -&gt; Foxglove analysis</span><br></pre></td></tr></table></figure>
+
+<p>最小实现：</p>
+<ol>
+<li>在仿真里启动 Nav2。</li>
+<li>给一个目标点。</li>
+<li>制造障碍物或局部路径失败。</li>
+<li>录制 rosbag2。</li>
+<li>用 Foxglove 回放。</li>
+<li>分析 costmap、cmd_vel、TF 和 odom。</li>
+</ol>
+<p>履历表达：</p>
+<ul>
+<li>基于 Nav2 搭建移动机器人导航系统，并通过 rosbag2 &#x2F; Foxglove 复盘导航失败案例，定位 costmap、TF、定位漂移和控制命令异常。</li>
+</ul>
+<hr>
+<h2 id="十、常见失效模式"><a href="#十、常见失效模式" class="headerlink" title="十、常见失效模式"></a>十、常见失效模式</h2><p>ROS 2 工程问题最麻烦的地方是：代码可能没报错，但系统就是不对。</p>
+<h3 id="10-1-Topic-有，但没有数据"><a href="#10-1-Topic-有，但没有数据" class="headerlink" title="10.1 Topic 有，但没有数据"></a>10.1 Topic 有，但没有数据</h3><p>常见原因：</p>
+<ul>
+<li>QoS 不匹配</li>
+<li>发布者没有启动</li>
+<li>namespace 不一致</li>
+<li>remap 写错</li>
+<li>topic 名称拼错</li>
+<li>节点 lifecycle 没激活</li>
+</ul>
+<p>排查顺序：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ros2 topic list</span><br><span class="line">ros2 topic info</span><br><span class="line">ros2 topic echo</span><br><span class="line">ros2 node list</span><br><span class="line">ros2 node info</span><br></pre></td></tr></table></figure>
+
+<h3 id="10-2-TF-树断了"><a href="#10-2-TF-树断了" class="headerlink" title="10.2 TF 树断了"></a>10.2 TF 树断了</h3><p>常见原因：</p>
+<ul>
+<li>静态 TF 没发布</li>
+<li>frame id 写错</li>
+<li>多个节点发布同一条 TF</li>
+<li>时间戳不一致</li>
+<li>map &#x2F; odom &#x2F; base_link 关系混乱</li>
+</ul>
+<p>排查工具：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ros2 run tf2_tools view_frames</span><br><span class="line">ros2 run tf2_ros tf2_echo map base_link</span><br></pre></td></tr></table></figure>
+
+<h3 id="10-3-控制器加载失败"><a href="#10-3-控制器加载失败" class="headerlink" title="10.3 控制器加载失败"></a>10.3 控制器加载失败</h3><p>常见原因：</p>
+<ul>
+<li>controller 名称写错</li>
+<li>command interface 不匹配</li>
+<li>state interface 不匹配</li>
+<li>URDF 里 ros2_control 标签缺失</li>
+<li>hardware interface 没初始化</li>
+<li>controller_manager 没启动</li>
+</ul>
+<p>排查重点：</p>
+<ul>
+<li>看 controller_manager 日志</li>
+<li>看 controller list</li>
+<li>看 hardware interface 状态</li>
+<li>看 <code>/joint_states</code> 是否发布</li>
+</ul>
+<h3 id="10-4-RViz2-显示异常"><a href="#10-4-RViz2-显示异常" class="headerlink" title="10.4 RViz2 显示异常"></a>10.4 RViz2 显示异常</h3><p>常见原因：</p>
+<ul>
+<li>fixed frame 选错</li>
+<li>TF 缺失</li>
+<li>marker frame id 不对</li>
+<li>点云 QoS 不匹配</li>
+<li>图像压缩格式不对</li>
+<li>时间戳不一致</li>
+</ul>
+<p>不要只盯 RViz2。</p>
+<p>先确认底层数据和 TF 是否正确。</p>
+<h3 id="10-5-rosbag-回放结果和现场不一致"><a href="#10-5-rosbag-回放结果和现场不一致" class="headerlink" title="10.5 rosbag 回放结果和现场不一致"></a>10.5 rosbag 回放结果和现场不一致</h3><p>常见原因：</p>
+<ul>
+<li>没录 <code>/tf_static</code></li>
+<li>没录关键参数</li>
+<li>没录控制命令</li>
+<li>回放时 use_sim_time 没开</li>
+<li>某些节点仍在使用实时系统时间</li>
+<li>原现场有硬件状态没有记录</li>
+</ul>
+<p>rosbag 不是魔法。</p>
+<p>它只能复现你录下来的东西。</p>
+<hr>
+<h2 id="十一、前沿动态：2026-05-时点应该关注什么"><a href="#十一、前沿动态：2026-05-时点应该关注什么" class="headerlink" title="十一、前沿动态：2026-05 时点应该关注什么"></a>十一、前沿动态：2026-05 时点应该关注什么</h2><p>ROS 2 生态每年都会更新，但工程上不要只盯版本号。</p>
+<h3 id="11-1-Lyrical-Luth-成为新-LTS"><a href="#11-1-Lyrical-Luth-成为新-LTS" class="headerlink" title="11.1 Lyrical Luth 成为新 LTS"></a>11.1 Lyrical Luth 成为新 LTS</h3><p>2026 年 5 月，ROS 2 Lyrical Luth 发布，并作为 LTS 支持到 2031 年 5 月。</p>
+<p>新项目可以开始关注 Lyrical。</p>
+<p>但如果你的依赖包、硬件驱动、教程和团队经验都在 Jazzy，继续使用 Jazzy 也很合理。</p>
+<p>版本选择要服务工程稳定性。</p>
+<h3 id="11-2-Jazzy-仍然有大量工程价值"><a href="#11-2-Jazzy-仍然有大量工程价值" class="headerlink" title="11.2 Jazzy 仍然有大量工程价值"></a>11.2 Jazzy 仍然有大量工程价值</h3><p>Jazzy 是 2024 年发布的 LTS，支持周期长，生态成熟度高。</p>
+<p>很多硬件厂商和教程会继续围绕 Jazzy。</p>
+<p>对学习者来说，Jazzy 仍然是很稳的选择。</p>
+<h3 id="11-3-ros2-control-会越来越重要"><a href="#11-3-ros2-control-会越来越重要" class="headerlink" title="11.3 ros2_control 会越来越重要"></a>11.3 ros2_control 会越来越重要</h3><p>越来越多机器人项目会把控制器和硬件接口规范化。</p>
+<p>ros2_control 的价值在于：</p>
+<ul>
+<li>控制器复用</li>
+<li>仿真真机切换</li>
+<li>硬件抽象</li>
+<li>与 MoveIt 2 &#x2F; Gazebo &#x2F; Isaac 生态对接</li>
+</ul>
+<p>如果你做机器人控制或硬件系统，ros2_control 是核心能力。</p>
+<h3 id="11-4-可视化和日志工具会继续升级"><a href="#11-4-可视化和日志工具会继续升级" class="headerlink" title="11.4 可视化和日志工具会继续升级"></a>11.4 可视化和日志工具会继续升级</h3><p>Foxglove、rerun、PlotJuggler 这类工具越来越重要。</p>
+<p>因为机器人系统越复杂，越不可能靠打印日志调试。</p>
+<p>未来更重要的是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">record -&gt; replay -&gt; visualize -&gt; compare -&gt; regress</span><br></pre></td></tr></table></figure>
+
+<p>也就是把调试流程工程化。</p>
+<h3 id="11-5-ROS-2-会和-VLA-机器人学习结合"><a href="#11-5-ROS-2-会和-VLA-机器人学习结合" class="headerlink" title="11.5 ROS 2 会和 VLA &#x2F; 机器人学习结合"></a>11.5 ROS 2 会和 VLA &#x2F; 机器人学习结合</h3><p>机器人学习模型最终还是要接入系统。</p>
+<p>不管是 VLA、模仿学习策略还是强化学习策略，最后都要处理：</p>
+<ul>
+<li>订阅传感器</li>
+<li>输出动作</li>
+<li>与控制器频率对齐</li>
+<li>记录数据</li>
+<li>安全回退</li>
+<li>失败复盘</li>
+</ul>
+<p>所以 ROS 2 不是过时的工程工具，而是具身智能模型落地时的系统接口之一。</p>
+<hr>
+<h2 id="十二、这一篇的核心结论"><a href="#十二、这一篇的核心结论" class="headerlink" title="十二、这一篇的核心结论"></a>十二、这一篇的核心结论</h2><p>ROS 2 的价值不是“会写节点”，而是能把机器人系统组织成工程闭环。</p>
+<p>一条完整 ROS 2 工程链路大致是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">driver</span><br><span class="line">  -&gt; topic / service / action</span><br><span class="line">  -&gt; TF2</span><br><span class="line">  -&gt; state estimation</span><br><span class="line">  -&gt; planning</span><br><span class="line">  -&gt; ros2_control</span><br><span class="line">  -&gt; hardware</span><br><span class="line">  -&gt; rosbag2</span><br><span class="line">  -&gt; replay and debug</span><br></pre></td></tr></table></figure>
+
+<p>这篇最重要的结论有五个：</p>
+<ol>
+<li>Topic、Service、Action 要按任务性质选择。</li>
+<li>QoS 是 ROS 2 通信问题的高频根源。</li>
+<li>TF2 是机器人坐标系统的生命线。</li>
+<li>ros2_control 是仿真和真机控制接口统一的关键。</li>
+<li>rosbag2、Foxglove、PlotJuggler 是工程调试闭环的核心工具。</li>
+</ol>
+<p>如果你想做一个有履历价值的 ROS 2 项目，优先做三件事：</p>
+<ul>
+<li>多传感器数据流与 TF 树</li>
+<li>ros2_control 差速底盘或机械臂</li>
+<li>Nav2 导航失败复盘</li>
+</ul>
+<p>这些项目比“跟着教程跑小海龟”更有分量，因为它们接近真实机器人系统每天都会遇到的问题。</p>
+<hr>
+<h2 id="系列导航"><a href="#系列导航" class="headerlink" title="系列导航"></a>系列导航</h2><p>本篇在系列中的位置：</p>
+<p><code>总路线图 -&gt; 数学基础 -&gt; 坐标系 -&gt; 运动学 -&gt; 概率滤波 -&gt; 感知与三维理解 -&gt; 机械臂控制 -&gt; 接触抓取 -&gt; 四足控制 -&gt; 人形控制基础 -&gt; 人形全身控制 -&gt; QP 实现 -&gt; 接触力分配 -&gt; 状态估计 -&gt; 仿真实战 -&gt; ROS 2 工程</code></p>
+<ul>
+<li>上一篇：<a href="/2026/05/23/%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BB%BF%E7%9C%9F%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BB%8EURDF%E5%88%B0IsaacLab%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83/" title="机器人仿真实战：从 URDF 到 Isaac Lab 并行训练">机器人仿真实战：从 URDF 到 Isaac Lab 并行训练</a></li>
+<li>下一篇：<a href="/2026/05/24/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E5%85%A5%E9%97%A8%EF%BC%9APPO%E3%80%81legged_gym%E4%B8%8ESim2Real/" title="机器人强化学习入门：PPO、legged_gym 与 Sim2Real">机器人强化学习入门：PPO、legged_gym 与 Sim2Real</a></li>
+<li>回到总路线：<a href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</a></li>
+</ul>
+<link rel="stylesheet" href="/css/spoiler.css" type="text/css"><script src="/js/spoiler.js" type="text/javascript" async></script></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://LJS515.github.io/">YiQiu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://ljs515.github.io/2026/05/23/ROS2%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8Erosbag%E8%B0%83%E8%AF%95/">https://ljs515.github.io/2026/05/23/ROS2%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8Erosbag%E8%B0%83%E8%AF%95/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://ljs515.github.io" target="_blank">YiQiuのblog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD/">具身智能</a><a class="post-meta__tags" href="/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA/">机器人</a><a class="post-meta__tags" href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/">开源项目</a><a class="post-meta__tags" href="/tags/ROS-2/">ROS 2</a><a class="post-meta__tags" href="/tags/%E4%B8%AD%E9%97%B4%E4%BB%B6/">中间件</a><a class="post-meta__tags" href="/tags/ros2-control/">ros2_control</a><a class="post-meta__tags" href="/tags/%E8%B0%83%E8%AF%95/">调试</a></div><div class="post-share"><div class="social-share" data-image="/img/04.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>感谢您的支持</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechat.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wechat.jpg" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpg" alt="alipay"/></a><div class="post-qr-code-desc">alipay</div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related  no-desc" href="/2026/05/24/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E5%85%A5%E9%97%A8%EF%BC%9APPO%E3%80%81legged_gym%E4%B8%8ESim2Real/" title="机器人强化学习入门：PPO、legged_gym 与 Sim2Real"><img class="cover" src="/img/04.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">机器人强化学习入门：PPO、legged_gym 与 Sim2Real</div></div></div></a><a class="pagination-related  no-desc" href="/2026/05/23/%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BB%BF%E7%9C%9F%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BB%8EURDF%E5%88%B0IsaacLab%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83/" title="机器人仿真实战：从 URDF 到 Isaac Lab 并行训练"><img class="cover" src="/img/04.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">机器人仿真实战：从 URDF 到 Isaac Lab 并行训练</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related no-desc" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/" title="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-22</div><div class="info-item-2">具身智能中的感知与三维理解：相机、SLAM 与 3D 表示</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/24/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E5%85%A5%E9%97%A8%EF%BC%9APPO%E3%80%81legged_gym%E4%B8%8ESim2Real/" title="机器人强化学习入门：PPO、legged_gym 与 Sim2Real"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-24</div><div class="info-item-2">机器人强化学习入门：PPO、legged_gym 与 Sim2Real</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/23/%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BB%BF%E7%9C%9F%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BB%8EURDF%E5%88%B0IsaacLab%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83/" title="机器人仿真实战：从 URDF 到 Isaac Lab 并行训练"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-23</div><div class="info-item-2">机器人仿真实战：从 URDF 到 Isaac Lab 并行训练</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E5%AE%9E%E6%88%98%EF%BC%9ADiffusion%20Policy%E3%80%81ACT%E4%B8%8ELeRobot/" title="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot"><img class="cover" src="/img/04.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="author-info-name">YiQiu</div><div class="author-info-description">专注于嵌入式技术研究 | ROS学习之路 | 深度学习&人工智能 | 算法研究</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">21</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">52</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" href="https://LJS515.github.io/"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/LJS515" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:3435583503@qq.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><style>
+.announcement-card {
+    --main-color: #ff00ff;
+    --secondary-color: #00ffff;
+    --highlight-color: #ff5500;
+    position: relative;
+    overflow: hidden;
+}
+.announcement-content {
+    font-size: 1rem; 
+    line-height: 1.2; 
+    color: #ffffff;
+    position: relative;
+}
+.keyword {
+    color: var(--secondary-color);
+    font-weight: 300;
+    font-size: 1.1rem; 
+}
+.highlight {
+    color: var(--main-color);
+    font-weight: 1000;
+    font-size: 1.2rem; 
+}
+.announcement-content ul {
+    list-style-type: none;
+    margin: 0.8rem 0; 
+    padding-left: 1.5rem;   
+}
+</style>
+<div class="announcement-card">
+    <div class="announcement-content">
+        <p><span class="highlight">欢迎来到「YiQiu」ROS&AI研习录</span>！🎉</p>
+        <p><strong>本平台专注于：</strong></p>
+        <ul>
+            <li><span class="keyword">> 嵌入式系统开发</span></li>
+            <li><span class="keyword">> ROS学习</span></li>
+            <li><span class="keyword">> 算法研究</span></li>
+            <li><span class="keyword">> 深度学习&人工智能</span></li>
+        </ul>
+        <p>🌟 <strong>加入我们，一起探索机器人的奥秘，提升AI实战能力，共同创造更美好的人工智能！</strong></p>
+    </div>
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#ROS-2-%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8E-rosbag-%E8%B0%83%E8%AF%95"><span class="toc-number">1.</span> <span class="toc-text">ROS 2 工程指南：节点、TF、控制环与 rosbag 调试</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81ROS-2-%E5%88%B0%E5%BA%95%E8%A7%A3%E5%86%B3%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98"><span class="toc-number">1.1.</span> <span class="toc-text">一、ROS 2 到底解决什么问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E4%B8%AD%E9%97%B4%E4%BB%B6"><span class="toc-number">1.1.1.</span> <span class="toc-text">1.1 机器人为什么需要中间件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-ROS-2-%E5%92%8C-ROS-1-%E7%9A%84%E6%A0%B8%E5%BF%83%E5%B7%AE%E5%BC%82"><span class="toc-number">1.1.2.</span> <span class="toc-text">1.2 ROS 2 和 ROS 1 的核心差异</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3-2026-%E5%B9%B4%E8%AF%A5%E9%80%89%E5%93%AA%E4%B8%AA-ROS-2-%E7%89%88%E6%9C%AC"><span class="toc-number">1.1.3.</span> <span class="toc-text">1.3 2026 年该选哪个 ROS 2 版本</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E8%8A%82%E7%82%B9%E3%80%81Topic%E3%80%81Service-%E5%92%8C-Action"><span class="toc-number">1.2.</span> <span class="toc-text">二、节点、Topic、Service 和 Action</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-Topic%EF%BC%9A%E6%8C%81%E7%BB%AD%E6%95%B0%E6%8D%AE%E6%B5%81"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 Topic：持续数据流</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-Service%EF%BC%9A%E8%AF%B7%E6%B1%82%E5%92%8C%E5%93%8D%E5%BA%94"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 Service：请求和响应</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-Action%EF%BC%9A%E9%95%BF%E6%97%B6%E9%97%B4%E4%BB%BB%E5%8A%A1"><span class="toc-number">1.2.3.</span> <span class="toc-text">2.3 Action：长时间任务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E4%B8%89%E8%80%85%E6%80%8E%E4%B9%88%E9%80%89"><span class="toc-number">1.2.4.</span> <span class="toc-text">2.4 三者怎么选</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81QoS%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E6%B6%88%E6%81%AF%E6%9C%89%E6%97%B6%E4%BC%9A%E6%94%B6%E4%B8%8D%E5%88%B0"><span class="toc-number">1.3.</span> <span class="toc-text">三、QoS：为什么消息有时会收不到</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-reliability"><span class="toc-number">1.3.1.</span> <span class="toc-text">3.1 reliability</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-durability"><span class="toc-number">1.3.2.</span> <span class="toc-text">3.2 durability</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-history-%E5%92%8C-depth"><span class="toc-number">1.3.3.</span> <span class="toc-text">3.3 history 和 depth</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-deadline-%E5%92%8C-liveliness"><span class="toc-number">1.3.4.</span> <span class="toc-text">3.4 deadline 和 liveliness</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-QoS-%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%BB%BA%E8%AE%AE"><span class="toc-number">1.3.5.</span> <span class="toc-text">3.5 QoS 的工程建议</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81TF2%EF%BC%9A%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%9D%90%E6%A0%87%E9%93%BE%E7%9A%84%E7%94%9F%E5%91%BD%E7%BA%BF"><span class="toc-number">1.4.</span> <span class="toc-text">四、TF2：机器人坐标链的生命线</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-TF2-%E7%AE%A1%E4%BB%80%E4%B9%88"><span class="toc-number">1.4.1.</span> <span class="toc-text">4.1 TF2 管什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-map%E3%80%81odom-%E5%92%8C-base-link"><span class="toc-number">1.4.2.</span> <span class="toc-text">4.2 map、odom 和 base_link</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-%E9%9D%99%E6%80%81-TF-%E5%92%8C%E5%8A%A8%E6%80%81-TF"><span class="toc-number">1.4.3.</span> <span class="toc-text">4.3 静态 TF 和动态 TF</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-TF-%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98"><span class="toc-number">1.4.4.</span> <span class="toc-text">4.4 TF 常见问题</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81ros2-control%EF%BC%9A%E6%8E%A7%E5%88%B6%E7%8E%AF%E5%92%8C%E7%A1%AC%E4%BB%B6%E6%8E%A5%E5%8F%A3"><span class="toc-number">1.5.</span> <span class="toc-text">五、ros2_control：控制环和硬件接口</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-ros2-control-%E7%9A%84%E6%A0%B8%E5%BF%83%E7%BB%93%E6%9E%84"><span class="toc-number">1.5.1.</span> <span class="toc-text">5.1 ros2_control 的核心结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-hardware-interface"><span class="toc-number">1.5.2.</span> <span class="toc-text">5.2 hardware interface</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-controller-manager"><span class="toc-number">1.5.3.</span> <span class="toc-text">5.3 controller_manager</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-%E6%8E%A7%E5%88%B6%E9%A2%91%E7%8E%87"><span class="toc-number">1.5.4.</span> <span class="toc-text">5.4 控制频率</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5-ros2-control-%E6%9C%80%E5%B0%8F%E9%A1%B9%E7%9B%AE"><span class="toc-number">1.5.5.</span> <span class="toc-text">5.5 ros2_control 最小项目</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81Nav2-%E5%92%8C-MoveIt-2%EF%BC%9A%E5%AF%BC%E8%88%AA%E4%B8%8E%E6%9C%BA%E6%A2%B0%E8%87%82%E8%A7%84%E5%88%92"><span class="toc-number">1.6.</span> <span class="toc-text">六、Nav2 和 MoveIt 2：导航与机械臂规划</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-Nav2-%E8%A7%A3%E5%86%B3%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98"><span class="toc-number">1.6.1.</span> <span class="toc-text">6.1 Nav2 解决什么问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-MoveIt-2-%E8%A7%A3%E5%86%B3%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98"><span class="toc-number">1.6.2.</span> <span class="toc-text">6.2 MoveIt 2 解决什么问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-OMPL-%E5%92%8C-Behavior-Tree"><span class="toc-number">1.6.3.</span> <span class="toc-text">6.3 OMPL 和 Behavior Tree</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81rosbag2%EF%BC%9A%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%B0%83%E8%AF%95%E7%9A%84%E6%A0%B8%E5%BF%83%E5%B7%A5%E5%85%B7"><span class="toc-number">1.7.</span> <span class="toc-text">七、rosbag2：机器人调试的核心工具</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-rosbag2-%E8%AE%B0%E5%BD%95%E4%BB%80%E4%B9%88"><span class="toc-number">1.7.1.</span> <span class="toc-text">7.1 rosbag2 记录什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E8%A6%81%E4%BB%80%E4%B9%88%E9%83%BD%E5%BD%95"><span class="toc-number">1.7.2.</span> <span class="toc-text">7.2 为什么不要什么都录</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-%E5%9B%9E%E6%94%BE%E6%AF%94%E5%AE%9E%E6%97%B6%E7%9C%8B%E6%9B%B4%E9%87%8D%E8%A6%81"><span class="toc-number">1.7.3.</span> <span class="toc-text">7.3 回放比实时看更重要</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4-rosbag2-%E6%9C%80%E5%B0%8F%E9%A1%B9%E7%9B%AE"><span class="toc-number">1.7.4.</span> <span class="toc-text">7.4 rosbag2 最小项目</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE%E7%9F%A9%E9%98%B5"><span class="toc-number">1.8.</span> <span class="toc-text">八、开源项目矩阵</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-%E6%A0%B8%E5%BF%83%E9%80%9A%E4%BF%A1"><span class="toc-number">1.8.1.</span> <span class="toc-text">8.1 核心通信</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-%E6%8E%A7%E5%88%B6%E6%A1%86%E6%9E%B6"><span class="toc-number">1.8.2.</span> <span class="toc-text">8.2 控制框架</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-%E8%A7%84%E5%88%92%E5%AF%BC%E8%88%AA"><span class="toc-number">1.8.3.</span> <span class="toc-text">8.3 规划导航</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-4-%E5%B5%8C%E5%85%A5%E5%BC%8F%E6%8E%A5%E5%85%A5"><span class="toc-number">1.8.4.</span> <span class="toc-text">8.4 嵌入式接入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-5-%E8%B0%83%E8%AF%95%E5%B7%A5%E5%85%B7"><span class="toc-number">1.8.5.</span> <span class="toc-text">8.5 调试工具</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E6%9C%80%E6%8E%A8%E8%8D%90%E5%81%9A%E7%9A%84%E4%B8%89%E4%B8%AA-ROS-2-%E9%A1%B9%E7%9B%AE"><span class="toc-number">1.9.</span> <span class="toc-text">九、最推荐做的三个 ROS 2 项目</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-%E9%A1%B9%E7%9B%AE%E4%B8%80%EF%BC%9A%E5%A4%9A%E4%BC%A0%E6%84%9F%E5%99%A8%E6%95%B0%E6%8D%AE%E6%B5%81%E4%B8%8E-TF-%E6%A0%91"><span class="toc-number">1.9.1.</span> <span class="toc-text">9.1 项目一：多传感器数据流与 TF 树</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-%E9%A1%B9%E7%9B%AE%E4%BA%8C%EF%BC%9Aros2-control-%E5%B7%AE%E9%80%9F%E5%BA%95%E7%9B%98%E6%88%96%E6%9C%BA%E6%A2%B0%E8%87%82"><span class="toc-number">1.9.2.</span> <span class="toc-text">9.2 项目二：ros2_control 差速底盘或机械臂</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-3-%E9%A1%B9%E7%9B%AE%E4%B8%89%EF%BC%9ANav2-%E5%AF%BC%E8%88%AA%E5%A4%B1%E8%B4%A5%E5%A4%8D%E7%9B%98"><span class="toc-number">1.9.3.</span> <span class="toc-text">9.3 项目三：Nav2 导航失败复盘</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E5%B8%B8%E8%A7%81%E5%A4%B1%E6%95%88%E6%A8%A1%E5%BC%8F"><span class="toc-number">1.10.</span> <span class="toc-text">十、常见失效模式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-Topic-%E6%9C%89%EF%BC%8C%E4%BD%86%E6%B2%A1%E6%9C%89%E6%95%B0%E6%8D%AE"><span class="toc-number">1.10.1.</span> <span class="toc-text">10.1 Topic 有，但没有数据</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-TF-%E6%A0%91%E6%96%AD%E4%BA%86"><span class="toc-number">1.10.2.</span> <span class="toc-text">10.2 TF 树断了</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-3-%E6%8E%A7%E5%88%B6%E5%99%A8%E5%8A%A0%E8%BD%BD%E5%A4%B1%E8%B4%A5"><span class="toc-number">1.10.3.</span> <span class="toc-text">10.3 控制器加载失败</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-4-RViz2-%E6%98%BE%E7%A4%BA%E5%BC%82%E5%B8%B8"><span class="toc-number">1.10.4.</span> <span class="toc-text">10.4 RViz2 显示异常</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-5-rosbag-%E5%9B%9E%E6%94%BE%E7%BB%93%E6%9E%9C%E5%92%8C%E7%8E%B0%E5%9C%BA%E4%B8%8D%E4%B8%80%E8%87%B4"><span class="toc-number">1.10.5.</span> <span class="toc-text">10.5 rosbag 回放结果和现场不一致</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E5%89%8D%E6%B2%BF%E5%8A%A8%E6%80%81%EF%BC%9A2026-05-%E6%97%B6%E7%82%B9%E5%BA%94%E8%AF%A5%E5%85%B3%E6%B3%A8%E4%BB%80%E4%B9%88"><span class="toc-number">1.11.</span> <span class="toc-text">十一、前沿动态：2026-05 时点应该关注什么</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-Lyrical-Luth-%E6%88%90%E4%B8%BA%E6%96%B0-LTS"><span class="toc-number">1.11.1.</span> <span class="toc-text">11.1 Lyrical Luth 成为新 LTS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-Jazzy-%E4%BB%8D%E7%84%B6%E6%9C%89%E5%A4%A7%E9%87%8F%E5%B7%A5%E7%A8%8B%E4%BB%B7%E5%80%BC"><span class="toc-number">1.11.2.</span> <span class="toc-text">11.2 Jazzy 仍然有大量工程价值</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-3-ros2-control-%E4%BC%9A%E8%B6%8A%E6%9D%A5%E8%B6%8A%E9%87%8D%E8%A6%81"><span class="toc-number">1.11.3.</span> <span class="toc-text">11.3 ros2_control 会越来越重要</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-4-%E5%8F%AF%E8%A7%86%E5%8C%96%E5%92%8C%E6%97%A5%E5%BF%97%E5%B7%A5%E5%85%B7%E4%BC%9A%E7%BB%A7%E7%BB%AD%E5%8D%87%E7%BA%A7"><span class="toc-number">1.11.4.</span> <span class="toc-text">11.4 可视化和日志工具会继续升级</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-5-ROS-2-%E4%BC%9A%E5%92%8C-VLA-%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%AD%A6%E4%B9%A0%E7%BB%93%E5%90%88"><span class="toc-number">1.11.5.</span> <span class="toc-text">11.5 ROS 2 会和 VLA &#x2F; 机器人学习结合</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81%E8%BF%99%E4%B8%80%E7%AF%87%E7%9A%84%E6%A0%B8%E5%BF%83%E7%BB%93%E8%AE%BA"><span class="toc-number">1.12.</span> <span class="toc-text">十二、这一篇的核心结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%B3%BB%E5%88%97%E5%AF%BC%E8%88%AA"><span class="toc-number">1.13.</span> <span class="toc-text">系列导航</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"/></a><div class="content"><a class="title" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</a><time datetime="2026-05-25T04:05:00.000Z" title="发表于 2026-05-25 12:05:00">2026-05-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E5%AE%9E%E6%88%98%EF%BC%9ADiffusion%20Policy%E3%80%81ACT%E4%B8%8ELeRobot/" title="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot"/></a><div class="content"><a class="title" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E5%AE%9E%E6%88%98%EF%BC%9ADiffusion%20Policy%E3%80%81ACT%E4%B8%8ELeRobot/" title="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot">机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot</a><time datetime="2026-05-25T02:45:00.000Z" title="发表于 2026-05-25 10:45:00">2026-05-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/05/24/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E5%85%A5%E9%97%A8%EF%BC%9APPO%E3%80%81legged_gym%E4%B8%8ESim2Real/" title="机器人强化学习入门：PPO、legged_gym 与 Sim2Real"><img src="/img/04.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人强化学习入门：PPO、legged_gym 与 Sim2Real"/></a><div class="content"><a class="title" href="/2026/05/24/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E5%85%A5%E9%97%A8%EF%BC%9APPO%E3%80%81legged_gym%E4%B8%8ESim2Real/" title="机器人强化学习入门：PPO、legged_gym 与 Sim2Real">机器人强化学习入门：PPO、legged_gym 与 Sim2Real</a><time datetime="2026-05-24T02:40:00.000Z" title="发表于 2026-05-24 10:40:00">2026-05-24</time></div></div></div></div></div></div></main><footer id="footer" style="background-color: rgba(45, 10, 61, 0.2);"><div class="footer-other"><div class="footer-copyright"></div><div class="footer_custom_text"><style>
+  .footer {
+    text-align: center;
+    position: relative;
+  }
+  .social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .social-links i {
+    color: #8400ff;
+  }
+  .social-link {
+    color: #8a2be2;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: rgba(138, 43, 226, 0.1);
+  }
+  .social-link:hover {
+    color: #ffffff;
+    background: #892be2;
+    transform: translateY(-3px) scale(1.08);
+    box-shadow: 0 5px 15px rgba(138, 43, 226, 0.4);
+    text-decoration: none !important;
+  }
+  .footer p {
+    margin: 0.5rem 0;
+    line-height: 1.4;
+  }
+  .copyright {
+    font-size: 1.1rem;
+    color: #c08bdf;
+    font-weight: 400;
+  }
+  .tagline {
+    font-size: 0.8rem;
+    color: #8a2be2;
+    font-style: italic;
+    font-weight: 500;
+  }
+  .footer-note {
+    font-size: 0.78rem;
+    color: rgba(219, 142, 255, 0.8);
+  }
+</style>
+<div class="footer">
+  <div class="social-links">
+    <a href="https://github.com/LJS515" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+    <a href="https://blog.csdn.net/2401_84593538" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="CSDN" title="CSDN">
+      <i class="fas fa-code"></i>
+    </a>
+    <a href="https://www.xiaohongshu.com/user/profile/5e8a0aae0000000001002ce4" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="小红书" title="小红书">
+      <i class="fas fa-book"></i>
+    </a>
+    <a href="https://space.bilibili.com/1158177941" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="bilibili" title="bilibili">
+      <i class="fab fa-bilibili"></i>
+    </a>
+  </div>
+  <p class="copyright">© 2025 YiQiuのblog</p>
+  <p class="tagline">&gt; Stay curious, stay hacking, stay anime! &lt;</p>
+  <p class="footer-note">静态站点不再展示伪造访问量。后续如需真实统计，建议接入 Umami、Google Analytics 或 Cloudflare Web Analytics。</p>
+</div>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.2"></script><script src="/js/main.js?v=5.5.2"></script><div class="js-pjax"></div><script defer src="/js/cursor.js"></script><script src="/js/sakura.js"></script><meting-js class="no-destroy" id="8932390" server="netease" type="playlist" fixed="true" autoplay="true" order="random" volume="0.3" list-folded="false" list-max-height="36vh"> </meting-js><link rel="stylesheet" href="https://npm.elemecdn.com/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'"><script src="https://npm.elemecdn.com/aplayer/dist/APlayer.min.js"></script><script src="https://npm.elemecdn.com/meting/dist/Meting.min.js"></script><script>(() => {
+  const destroyAplayer = () => {
+    if (window.aplayers) {
+      for (let i = 0; i < window.aplayers.length; i++) {
+        if (!window.aplayers[i].options.fixed) {
+          window.aplayers[i].destroy()
+        }
+      }
+    }
+  }
+
+  const runMetingJS = () => {
+    typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+  }
+
+  btf.addGlobalFn('pjaxSend', destroyAplayer, 'destroyAplayer')
+  btf.addGlobalFn('pjaxComplete', loadMeting, 'runMetingJS')
+})()</script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      const usePjax = true
+      true
+        ? (usePjax ? pjax.loadUrl('/404.html') : window.location.href = '/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})()</script><script async data-pjax src="/"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词..." type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.2"></script></div></div><!-- hexo injector body_end start --><script data-pjax>
+  function butterfly_categories_card_injector_config(){
+    // 检查容器是否存在
+    var parent_div_git = document.getElementById('recent-posts');
+    // 如果容器不存在，则动态创建
+    if (!parent_div_git) {
+      console.warn('butterfly_categories_card: 挂载容器不存在，正在动态创建...');
+      // 创建新容器（默认插入到页面主体顶部）
+      parent_div_git = document.createElement('div');
+      parent_div_git.id = 'recent-posts'; // 赋予配置的ID
+      document.querySelector('#page').prepend(parent_div_git); // 插入到 #content-inner 内
+    }
+    var item_html = '<style>li.categoryBar-list-item{width:32.3%;}.categoryBar-list{max-height: 950px;overflow:auto;}.categoryBar-list::-webkit-scrollbar{width:0!important}@media screen and (max-width: 650px){.categoryBar-list{max-height: 800px;}}</style><div class="recent-post-item" style="height:auto;width:100%;padding:0px;"><div id="categoryBar"><ul class="categoryBar-list"><li class="categoryBar-list-item" style="background:url(/img/11.png);"> <a class="categoryBar-list-link" onclick="pjax.loadUrl(&quot;/categories/具身智能教程/&quot;);" href="javascript:void(0);">具身智能教程</a><span class="categoryBar-list-count">19</span><span class="categoryBar-list-descr">1</span></li></ul></div></div>';
+    console.log('已挂载 butterfly_categories_card');
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+  }
+  // 路径匹配逻辑（使用 startsWith）
+  if (location.pathname.startsWith('/categories/') || '/categories/' === 'all') {
+    butterfly_categories_card_injector_config();
+  }
+  </script><script data-pjax>
+  function butterfly_swiper_injector_config(){
+    var parent_div_git = document.getElementById('recent-posts');
+    var item_html = '<div class="recent-post-item" style="height: auto;width: 100%"><div class="blog-slider swiper-container-fade swiper-container-horizontal" id="swiper_container"><div class="blog-slider__wrp swiper-wrapper" style="transition-duration: 0ms;"></div><div class="blog-slider__pagination swiper-pagination-clickable swiper-pagination-bullets"></div></div></div>';
+    console.log('已挂载butterfly_swiper')
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+    }
+  var elist = 'undefined'.split(',');
+  var cpage = location.pathname;
+  var epage = '/';
+  var flag = 0;
+
+  for (var i=0;i<elist.length;i++){
+    if (cpage.includes(elist[i])){
+      flag++;
+    }
+  }
+
+  if ((epage ==='all')&&(flag == 0)){
+    butterfly_swiper_injector_config();
+  }
+  else if (epage === cpage){
+    butterfly_swiper_injector_config();
+  }
+  </script><script defer src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.js"></script><script defer data-pjax src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper_init.js"></script><!-- hexo injector body_end end --><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"right","width":200,"height":400},"mobile":{"show":true},"react":{"opacity":0.7},"log":false});</script></body></html>
