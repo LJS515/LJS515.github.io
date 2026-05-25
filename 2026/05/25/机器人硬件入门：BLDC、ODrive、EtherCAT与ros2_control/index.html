@@ -1,0 +1,916 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control | YiQiuのblog</title><meta name="author" content="YiQiu"><meta name="copyright" content="YiQiu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#f5f0fa"><meta name="description" content="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control 前面几篇我们一直在往机器人学习和上层智能走：  强化学习 模仿学习 VLA 大模型  但机器人不是只靠模型跑起来的。 再强的策略，最后都要变成： 123456voltagecurrenttorquejoint motioncontact forcesensor feedback  如果电机驱动不稳、编码器噪声大">
+<meta property="og:type" content="article">
+<meta property="og:title" content="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control">
+<meta property="og:url" content="https://ljs515.github.io/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT%E4%B8%8Eros2_control/index.html">
+<meta property="og:site_name" content="YiQiuのblog">
+<meta property="og:description" content="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control 前面几篇我们一直在往机器人学习和上层智能走：  强化学习 模仿学习 VLA 大模型  但机器人不是只靠模型跑起来的。 再强的策略，最后都要变成： 123456voltagecurrenttorquejoint motioncontact forcesensor feedback  如果电机驱动不稳、编码器噪声大">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ljs515.github.io/images/post-covers/hardware.png">
+<meta property="article:published_time" content="2026-05-25T08:45:00.000Z">
+<meta property="article:modified_time" content="2026-05-25T08:38:35.655Z">
+<meta property="article:author" content="YiQiu">
+<meta property="article:tag" content="具身智能">
+<meta property="article:tag" content="机器人">
+<meta property="article:tag" content="开源项目">
+<meta property="article:tag" content="ros2_control">
+<meta property="article:tag" content="机器人硬件">
+<meta property="article:tag" content="BLDC">
+<meta property="article:tag" content="FOC">
+<meta property="article:tag" content="ODrive">
+<meta property="article:tag" content="EtherCAT">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ljs515.github.io/images/post-covers/hardware.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control",
+  "url": "https://ljs515.github.io/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT%E4%B8%8Eros2_control/",
+  "image": "https://ljs515.github.io/images/post-covers/hardware.png",
+  "datePublished": "2026-05-25T08:45:00.000Z",
+  "dateModified": "2026-05-25T08:38:35.655Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YiQiu",
+      "url": "https://LJS515.github.io/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/01.png"><link rel="canonical" href="https://ljs515.github.io/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT%E4%B8%8Eros2_control/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.2"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#2d0a3d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f5f0fa')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chewy&amp;family=Ma+Shan+Zheng&amp;family=Fredoka+One&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":300,"languages":{"author":"作者: YiQiu","link":"链接: ","source":"来源: YiQiuのblog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Chewy&family=Fredoka+One&family=Caveat:wght@400;700&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet"><!-- hexo injector head_end start --><link rel="stylesheet" href="/css/categorybar.css"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiperstyle.css" media="print" onload="this.media='all'"><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-image: url(/img/03.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">22</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">57</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/images/post-covers/hardware.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/img/01.png" alt="Logo"><span class="site-name">YiQiuのblog</span></a><a class="nav-page-title" href="/"><span class="site-name">机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-05-25T08:45:00.000Z" title="发表于 2026-05-25 16:45:00">2026-05-25</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-05-25T08:38:35.655Z" title="更新于 2026-05-25 16:38:35">2026-05-25</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%95%99%E7%A8%8B/">具身智能教程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">4.2k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>14分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div class="ai-summary"><div class="ai-explanation" style="display: block;" data-summary="这篇文章从机器人工程视角讲清楚硬件层为什么决定机器人系统上限，重点解释 BLDC、FOC、电机驱动器、编码器、减速器、EtherCAT、CAN、ODrive、SimpleFOC、moteus 和 ros2_control。 文章给出从单电机调试到多关节实时控制环的实践路线，并说明如何把硬件闭环项目写进履历和作品集。">YiQiuAI正在绞尽脑汁想思路ING···</div><div class="ai-title"> <div class="ai-title-left"> <i class="fa-brands fa-slack"></i><div class="ai-title-text">YiQiuのAI摘要</div></div><div class="ai-tag" id="ai-tag">HunYuan-Lite</div></div></div><div id="post-outdate-notice" data="{&quot;limitDay&quot;:365,&quot;messagePrev&quot;:&quot;本文最后更新于&quot;,&quot;messageNext&quot;:&quot;天前，部分内容可能已失效&quot;,&quot;postUpdate&quot;:&quot;2026-05-25 16:38:35&quot;}" hidden></div><h1 id="机器人硬件入门：BLDC、ODrive、EtherCAT-与-ros2-control"><a href="#机器人硬件入门：BLDC、ODrive、EtherCAT-与-ros2-control" class="headerlink" title="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control"></a>机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control</h1><p><img src="/images/post-covers/hardware.png" alt="机器人硬件封面"></p>
+<p>前面几篇我们一直在往机器人学习和上层智能走：</p>
+<ul>
+<li>强化学习</li>
+<li>模仿学习</li>
+<li>VLA 大模型</li>
+</ul>
+<p>但机器人不是只靠模型跑起来的。</p>
+<p>再强的策略，最后都要变成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">voltage</span><br><span class="line">current</span><br><span class="line">torque</span><br><span class="line">joint motion</span><br><span class="line">contact force</span><br><span class="line">sensor feedback</span><br></pre></td></tr></table></figure>
+
+<p>如果电机驱动不稳、编码器噪声大、总线延迟乱跳、急停链路不可靠，那么上层算法越复杂，系统越难调。</p>
+<p>所以这篇文章回到硬件层。</p>
+<p>我们不做电机设计教材，也不把所有电气细节讲成百科，而是从机器人工程最常见的链路切入：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">BLDC motor</span><br><span class="line">  -&gt; motor driver</span><br><span class="line">  -&gt; encoder</span><br><span class="line">  -&gt; FOC</span><br><span class="line">  -&gt; velocity / position / torque loop</span><br><span class="line">  -&gt; realtime bus</span><br><span class="line">  -&gt; ros2_control</span><br><span class="line">  -&gt; robot joint</span><br></pre></td></tr></table></figure>
+
+<p>这篇会重点讲：</p>
+<ul>
+<li>为什么机器人常用 BLDC</li>
+<li>FOC 到底在控制什么</li>
+<li>ODrive、SimpleFOC、moteus 这类项目适合学什么</li>
+<li>EtherCAT、CAN、RS485 的区别应该怎么理解</li>
+<li>ros2_control 在硬件抽象里处于什么位置</li>
+<li>一条 1 kHz 多关节控制环需要哪些工程条件</li>
+<li>如何把硬件项目写进履历</li>
+</ul>
+<hr>
+<h2 id="一、硬件层解决的不是“会不会转”"><a href="#一、硬件层解决的不是“会不会转”" class="headerlink" title="一、硬件层解决的不是“会不会转”"></a>一、硬件层解决的不是“会不会转”</h2><p>很多人第一次做机器人硬件，会把目标写成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make the motor spin</span><br></pre></td></tr></table></figure>
+
+<p>这当然是第一步，但远远不够。</p>
+<p>机器人硬件真正要解决的是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">make the joint move accurately, safely and repeatedly</span><br><span class="line">under software control</span><br></pre></td></tr></table></figure>
+
+<p>一个电机能转，不代表它能用于机器人关节。</p>
+<p>机器人关节还需要：</p>
+<ul>
+<li>可控的力矩</li>
+<li>可测的位置</li>
+<li>可控的速度</li>
+<li>足够低的延迟</li>
+<li>可预测的发热</li>
+<li>可承受的冲击</li>
+<li>可靠的急停</li>
+<li>可回放的日志</li>
+</ul>
+<p>如果要接到上层控制器，还要满足：</p>
+<ul>
+<li>控制周期稳定</li>
+<li>命令和状态时间戳明确</li>
+<li>多关节同步</li>
+<li>故障状态可读</li>
+<li>零点和限位可校准</li>
+<li>软件接口可维护</li>
+</ul>
+<p>所以机器人硬件不是“电机 + 电源 + 杜邦线”。</p>
+<p>它是一条闭环：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">command</span><br><span class="line">  -&gt; drive</span><br><span class="line">  -&gt; motor</span><br><span class="line">  -&gt; reducer</span><br><span class="line">  -&gt; joint</span><br><span class="line">  -&gt; sensor</span><br><span class="line">  -&gt; state feedback</span><br><span class="line">  -&gt; controller</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="二、为什么机器人常用-BLDC"><a href="#二、为什么机器人常用-BLDC" class="headerlink" title="二、为什么机器人常用 BLDC"></a>二、为什么机器人常用 BLDC</h2><p>BLDC 是 Brushless DC Motor，无刷直流电机。</p>
+<p>它在机器人里很常见，因为它有几个优势：</p>
+<ul>
+<li>功率密度高</li>
+<li>寿命比有刷电机好</li>
+<li>可以做高动态响应</li>
+<li>适合力矩控制</li>
+<li>适合和编码器、驱动器组成伺服关节</li>
+</ul>
+<p>但 BLDC 不像普通直流有刷电机那样“两根线接电就转”。</p>
+<p>典型 BLDC 是三相电机。</p>
+<p>驱动器要根据转子位置，给三相绕组施加合适电流，让电机产生期望力矩。</p>
+<p>可以把它理解成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">desired_torque</span><br><span class="line">  -&gt; desired_phase_current</span><br><span class="line">  -&gt; inverter switching</span><br><span class="line">  -&gt; magnetic field</span><br><span class="line">  -&gt; rotor torque</span><br></pre></td></tr></table></figure>
+
+<p>这里最关键的反馈是转子位置。</p>
+<p>没有转子位置，驱动器就不知道该怎么换相。位置来源通常是：</p>
+<ul>
+<li>磁编码器</li>
+<li>光电编码器</li>
+<li>Hall 传感器</li>
+<li>sensorless 估计</li>
+</ul>
+<p>机器人关节一般不建议一开始就依赖 sensorless。低速、静止、接触和力控场景里，编码器反馈更稳。</p>
+<hr>
+<h2 id="三、FOC：把电流变成可控力矩"><a href="#三、FOC：把电流变成可控力矩" class="headerlink" title="三、FOC：把电流变成可控力矩"></a>三、FOC：把电流变成可控力矩</h2><p>FOC 是 Field Oriented Control，磁场定向控制。</p>
+<p>它的工程目标可以简单说成：</p>
+<p><strong>让 BLDC 的电流控制更像“直接控制力矩”。</strong></p>
+<p>驱动器会做几件事：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">read encoder</span><br><span class="line">read phase current</span><br><span class="line">transform current</span><br><span class="line">run current PI controller</span><br><span class="line">generate PWM</span><br><span class="line">drive inverter</span><br></pre></td></tr></table></figure>
+
+<p>你不需要一开始就手推所有坐标变换，但必须理解它在工程上的位置。</p>
+<p>FOC 是电机驱动器内部的底层控制。</p>
+<p>上层控制器给它的可能是：</p>
+<ul>
+<li>电流目标</li>
+<li>力矩目标</li>
+<li>速度目标</li>
+<li>位置目标</li>
+</ul>
+<p>驱动器内部再把这些目标拆成电流控制和 PWM 输出。</p>
+<p><img src="/images/robotics-hardware/motor-control-stack.png" alt="BLDC 电机控制栈"></p>
+<p>最常见的三层环是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">position loop</span><br><span class="line">  -&gt; velocity target</span><br><span class="line">  -&gt; velocity loop</span><br><span class="line">  -&gt; torque target</span><br><span class="line">  -&gt; current loop / FOC</span><br><span class="line">  -&gt; motor phase current</span><br></pre></td></tr></table></figure>
+
+<p>注意这个顺序。</p>
+<p>内环越快，外环越慢。</p>
+<p>一个常见经验是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">current loop: fastest</span><br><span class="line">velocity loop: medium</span><br><span class="line">position loop: slowest</span><br></pre></td></tr></table></figure>
+
+<p>如果内环不稳，外环调得再漂亮也没用。</p>
+<hr>
+<h2 id="四、电机、减速器和编码器要一起看"><a href="#四、电机、减速器和编码器要一起看" class="headerlink" title="四、电机、减速器和编码器要一起看"></a>四、电机、减速器和编码器要一起看</h2><p>选电机不能只看功率。</p>
+<p>机器人关节至少要同时看：</p>
+<ul>
+<li>额定电压</li>
+<li>最大电流</li>
+<li>连续电流</li>
+<li>峰值力矩</li>
+<li>连续力矩</li>
+<li>转速</li>
+<li>Kv</li>
+<li>相电阻</li>
+<li>相电感</li>
+<li>散热条件</li>
+<li>编码器分辨率</li>
+<li>减速比</li>
+<li>反向间隙</li>
+<li>结构刚度</li>
+</ul>
+<p>例如机械臂关节需要低速大力矩，通常会加减速器。</p>
+<p>减速器会带来：</p>
+<ul>
+<li>力矩放大</li>
+<li>速度降低</li>
+<li>反向间隙</li>
+<li>摩擦</li>
+<li>回差</li>
+<li>顺从性变化</li>
+</ul>
+<p>一个很粗的关节输出关系可以写成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">joint_speed = motor_speed / gear_ratio</span><br><span class="line">joint_torque = motor_torque * gear_ratio * efficiency</span><br></pre></td></tr></table></figure>
+
+<p>这只是估算，不是精确模型。</p>
+<p>真实关节还会受到摩擦、温升、齿隙、结构形变和控制器限流影响。</p>
+<p>所以作品集里不要只写“选了一个 400 W 电机”。更好的写法是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">selected motor, encoder and reducer based on target joint torque,</span><br><span class="line">speed range, backlash tolerance and thermal limits.</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、ODrive、SimpleFOC、moteus-各自适合学什么"><a href="#五、ODrive、SimpleFOC、moteus-各自适合学什么" class="headerlink" title="五、ODrive、SimpleFOC、moteus 各自适合学什么"></a>五、ODrive、SimpleFOC、moteus 各自适合学什么</h2><p>开源硬件和开源驱动项目很适合入门，因为你可以看到真实工程取舍。</p>
+<h3 id="5-1-SimpleFOC：理解-FOC-的低门槛入口"><a href="#5-1-SimpleFOC：理解-FOC-的低门槛入口" class="headerlink" title="5.1 SimpleFOC：理解 FOC 的低门槛入口"></a>5.1 SimpleFOC：理解 FOC 的低门槛入口</h3><p><a target="_blank" rel="noopener" href="https://github.com/simplefoc/Arduino-FOC">SimpleFOC</a> 适合学习：</p>
+<ul>
+<li>BLDC 基本接线</li>
+<li>编码器读取</li>
+<li>FOC 控制流程</li>
+<li>电流、速度、位置模式</li>
+<li>Arduino &#x2F; STM32 等低成本 MCU 控制</li>
+</ul>
+<p>它不一定适合直接做高性能机器人关节，但非常适合把“FOC 是什么”从抽象概念变成可运行代码。</p>
+<p>一个入门目标可以是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SimpleFOC</span><br><span class="line">  -&gt; one BLDC motor</span><br><span class="line">  -&gt; magnetic encoder</span><br><span class="line">  -&gt; velocity control</span><br><span class="line">  -&gt; position control</span><br><span class="line">  -&gt; log response curve</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-ODrive：把电机驱动工程跑完整"><a href="#5-2-ODrive：把电机驱动工程跑完整" class="headerlink" title="5.2 ODrive：把电机驱动工程跑完整"></a>5.2 ODrive：把电机驱动工程跑完整</h3><p><a target="_blank" rel="noopener" href="https://github.com/odriverobotics/ODrive">ODrive</a> 是机器人和轻型自动化里很常见的开源电机驱动生态。</p>
+<p>截至 2026 年 5 月，ODrive 官方文档的产品线主要围绕 Pro、S1、Micro 等设备，文档覆盖供电、编码器、接口、调试、固件和控制模式。</p>
+<p>ODrive 适合学习：</p>
+<ul>
+<li>电源和制动电阻</li>
+<li>编码器校准</li>
+<li>电机参数辨识</li>
+<li>电流限制</li>
+<li>速度和位置控制</li>
+<li>Python 工具调试</li>
+<li>CAN &#x2F; UART &#x2F; USB 等接口</li>
+<li>故障码和日志</li>
+</ul>
+<p>用 ODrive 做作品集，不要只录电机转动视频。</p>
+<p>你应该留下：</p>
+<ul>
+<li>接线图</li>
+<li>电机参数</li>
+<li>编码器类型</li>
+<li>校准流程</li>
+<li>控制模式</li>
+<li>电流限制</li>
+<li>阶跃响应</li>
+<li>故障码处理</li>
+<li>温度记录</li>
+</ul>
+<h3 id="5-3-moteus：机器人关节控制的工程参考"><a href="#5-3-moteus：机器人关节控制的工程参考" class="headerlink" title="5.3 moteus：机器人关节控制的工程参考"></a>5.3 moteus：机器人关节控制的工程参考</h3><p><a target="_blank" rel="noopener" href="https://github.com/mjbots/moteus">moteus</a> 是 mjbots 的开源 BLDC 伺服控制器生态。</p>
+<p>截至 2026 年 5 月，moteus 仍在持续发布新版本，文档和工具链对机器人关节很友好。</p>
+<p>它值得学习：</p>
+<ul>
+<li>高性能伺服关节接口</li>
+<li>CAN-FD 通信</li>
+<li>Python 工具</li>
+<li>控制模式设计</li>
+<li>实际机器人上的驱动器工程</li>
+</ul>
+<p>如果你想做四足、小型人形或高动态关节，moteus 的文档和代码很值得读。</p>
+<hr>
+<h2 id="六、总线：为什么多关节机器人不能靠一堆-USB"><a href="#六、总线：为什么多关节机器人不能靠一堆-USB" class="headerlink" title="六、总线：为什么多关节机器人不能靠一堆 USB"></a>六、总线：为什么多关节机器人不能靠一堆 USB</h2><p>单电机调试时，USB 很方便。</p>
+<p>但机器人一旦变成多关节，问题就来了：</p>
+<ul>
+<li>多个电机要同步</li>
+<li>控制周期要稳定</li>
+<li>状态反馈要准时</li>
+<li>线缆要可靠</li>
+<li>故障要能定位</li>
+<li>急停要能切断</li>
+</ul>
+<p>这时就需要总线。</p>
+<p>常见选择包括：</p>
+<ul>
+<li>EtherCAT</li>
+<li>CAN &#x2F; CAN-FD</li>
+<li>RS485</li>
+<li>Ethernet</li>
+<li>厂商私有总线</li>
+</ul>
+<p>可以粗略理解为：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">CAN / CAN-FD:</span><br><span class="line">  robust, common in mobile robots and compact joints</span><br><span class="line"></span><br><span class="line">EtherCAT:</span><br><span class="line">  high performance, deterministic, common in industrial servo systems</span><br><span class="line"></span><br><span class="line">RS485:</span><br><span class="line">  simple, cheap, common in low-cost servo modules</span><br></pre></td></tr></table></figure>
+
+<p>真正选型时，要看：</p>
+<ul>
+<li>关节数量</li>
+<li>控制频率</li>
+<li>单周期数据量</li>
+<li>同步要求</li>
+<li>线缆长度</li>
+<li>实时性</li>
+<li>驱动器支持</li>
+<li>调试工具</li>
+<li>成本</li>
+</ul>
+<p>不要迷信某个总线。</p>
+<p>如果是小车底盘，CAN 可能足够。</p>
+<p>如果是 6 轴机械臂高频伺服，EtherCAT 更常见。</p>
+<p>如果是低成本教学臂，RS485 舵机也能完成很多任务。</p>
+<p>关键是你要能解释为什么这样选。</p>
+<hr>
+<h2 id="七、EtherCAT：工业机器人里常见的实时总线"><a href="#七、EtherCAT：工业机器人里常见的实时总线" class="headerlink" title="七、EtherCAT：工业机器人里常见的实时总线"></a>七、EtherCAT：工业机器人里常见的实时总线</h2><p>EtherCAT 的价值在于确定性和同步。</p>
+<p>它适合这种场景：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">controller sends commands to many drives</span><br><span class="line">drives return states in the same cycle</span><br><span class="line">cycle repeats at stable frequency</span><br></pre></td></tr></table></figure>
+
+<p>典型链路是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">industrial PC</span><br><span class="line">  -&gt; EtherCAT master</span><br><span class="line">  -&gt; drive 1</span><br><span class="line">  -&gt; drive 2</span><br><span class="line">  -&gt; drive 3</span><br><span class="line">  -&gt; ...</span><br><span class="line">  -&gt; drive n</span><br></pre></td></tr></table></figure>
+
+<p>常见开源主站包括：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/OpenEtherCATsociety/SOEM">SOEM</a></li>
+<li><a target="_blank" rel="noopener" href="https://etherlab.org/en/ethercat/">IgH EtherCAT Master</a></li>
+</ul>
+<p>你需要理解几个关键词。</p>
+<p>PDO：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cyclic realtime data</span><br><span class="line">commands and states</span><br></pre></td></tr></table></figure>
+
+<p>SDO：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">configuration and parameter access</span><br></pre></td></tr></table></figure>
+
+<p>Distributed Clocks：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">time synchronization between devices</span><br></pre></td></tr></table></figure>
+
+<p>CiA 402：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">common servo drive state machine and control modes</span><br></pre></td></tr></table></figure>
+
+<p>做 EtherCAT 项目时，最有价值的不是“能扫到从站”，而是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">master starts</span><br><span class="line">  -&gt; slaves enter operational state</span><br><span class="line">  -&gt; PDO mapping correct</span><br><span class="line">  -&gt; cyclic command and state exchange stable</span><br><span class="line">  -&gt; drive follows command</span><br><span class="line">  -&gt; fault can be recovered</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="八、ros2-control：把硬件接进-ROS-2-控制体系"><a href="#八、ros2-control：把硬件接进-ROS-2-控制体系" class="headerlink" title="八、ros2_control：把硬件接进 ROS 2 控制体系"></a>八、ros2_control：把硬件接进 ROS 2 控制体系</h2><p>ros2_control 不是电机驱动器。</p>
+<p>它是 ROS 2 里的控制框架和硬件抽象层。</p>
+<p>它解决的问题是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">controllers should not care about low-level hardware details</span><br><span class="line">hardware drivers should expose standard command and state interfaces</span><br></pre></td></tr></table></figure>
+
+<p>典型结构是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">controller_manager</span><br><span class="line">  -&gt; controller</span><br><span class="line">  -&gt; hardware_interface</span><br><span class="line">  -&gt; bus / driver</span><br><span class="line">  -&gt; motor drive</span><br><span class="line">  -&gt; joint</span><br></pre></td></tr></table></figure>
+
+<p><img src="/images/robotics-hardware/ethercat-ros2-control.png" alt="EtherCAT 与 ros2_control 控制闭环"></p>
+<p>你可以把 ros2_control 理解成一个接口契约。</p>
+<p>硬件层提供：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">read()</span><br><span class="line">write()</span><br><span class="line">state_interfaces</span><br><span class="line">command_interfaces</span><br></pre></td></tr></table></figure>
+
+<p>控制器层使用：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">joint position</span><br><span class="line">joint velocity</span><br><span class="line">joint effort</span><br></pre></td></tr></table></figure>
+
+<p>这样上层控制器就不用知道底层到底是 EtherCAT、CAN、串口还是仿真。</p>
+<p>截至 2026 年 5 月，ROS 2 官方已经发布 Lyrical Luth LTS，ros2_control 文档也持续覆盖 Jazzy、Kilted、Rolling 等版本。新项目仍建议优先按当前 ROS 2 LTS 和 ros2_control 官方文档来做。</p>
+<hr>
+<h2 id="九、实时控制环：1-kHz-不是口号"><a href="#九、实时控制环：1-kHz-不是口号" class="headerlink" title="九、实时控制环：1 kHz 不是口号"></a>九、实时控制环：1 kHz 不是口号</h2><p>机器人硬件文章里经常看到：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">1 kHz control loop</span><br></pre></td></tr></table></figure>
+
+<p>但 1 kHz 不是写在 README 里的装饰。</p>
+<p>1 kHz 意味着：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">one cycle = 1 ms</span><br></pre></td></tr></table></figure>
+
+<p>在这 1 ms 里，你要完成：</p>
+<ul>
+<li>读取传感器状态</li>
+<li>接收总线反馈</li>
+<li>运行控制器</li>
+<li>写入驱动器命令</li>
+<li>处理故障</li>
+<li>记录必要日志</li>
+</ul>
+<p>如果你的循环偶尔 1 ms，偶尔 8 ms，那不是稳定 1 kHz。</p>
+<p>需要关注：</p>
+<ul>
+<li>mean cycle time</li>
+<li>max cycle time</li>
+<li>jitter</li>
+<li>missed deadline count</li>
+<li>bus error count</li>
+<li>CPU load</li>
+<li>memory allocation</li>
+</ul>
+<p>可以这样记录：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">target_period_ms: 1.0</span><br><span class="line">mean_period_ms: 1.01</span><br><span class="line">p95_period_ms: 1.08</span><br><span class="line">max_period_ms: 1.42</span><br><span class="line">missed_deadline: 3 / 100000</span><br></pre></td></tr></table></figure>
+
+<p>这类数字非常有工程含金量。</p>
+<hr>
+<h2 id="十、安全链路：急停不是-UI-按钮"><a href="#十、安全链路：急停不是-UI-按钮" class="headerlink" title="十、安全链路：急停不是 UI 按钮"></a>十、安全链路：急停不是 UI 按钮</h2><p>机器人硬件里，安全要放在很前面。</p>
+<p>急停不应该只是软件界面里的一个按钮。</p>
+<p>至少要考虑：</p>
+<ul>
+<li>物理急停按钮</li>
+<li>驱动器 enable 信号</li>
+<li>主电源切断</li>
+<li>制动电阻</li>
+<li>保险丝</li>
+<li>限位开关</li>
+<li>软件速度限幅</li>
+<li>workspace 限制</li>
+<li>故障后状态机</li>
+</ul>
+<p>一个简单安全链路可以写成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">human hits e-stop</span><br><span class="line">  -&gt; drive enable disabled</span><br><span class="line">  -&gt; motor command stops</span><br><span class="line">  -&gt; controller enters safe state</span><br><span class="line">  -&gt; log last command and state</span><br></pre></td></tr></table></figure>
+
+<p>不要等机器人开始乱动才想安全。</p>
+<p>作品集里如果能展示安全设计，比单纯展示成功视频更可信。</p>
+<hr>
+<h2 id="十一、从单电机到-6-轴机械臂的实践路线"><a href="#十一、从单电机到-6-轴机械臂的实践路线" class="headerlink" title="十一、从单电机到 6 轴机械臂的实践路线"></a>十一、从单电机到 6 轴机械臂的实践路线</h2><p>建议按四个阶段走。</p>
+<h3 id="11-1-阶段一：单电机-FOC"><a href="#11-1-阶段一：单电机-FOC" class="headerlink" title="11.1 阶段一：单电机 FOC"></a>11.1 阶段一：单电机 FOC</h3><p>目标：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">one BLDC motor</span><br><span class="line">one encoder</span><br><span class="line">one driver</span><br><span class="line">velocity and position control</span><br></pre></td></tr></table></figure>
+
+<p>产物：</p>
+<ul>
+<li>接线图</li>
+<li>参数表</li>
+<li>校准记录</li>
+<li>速度响应曲线</li>
+<li>位置阶跃曲线</li>
+<li>电流限制说明</li>
+</ul>
+<h3 id="11-2-阶段二：单关节模块"><a href="#11-2-阶段二：单关节模块" class="headerlink" title="11.2 阶段二：单关节模块"></a>11.2 阶段二：单关节模块</h3><p>目标：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">motor + reducer + encoder + mechanical joint</span><br></pre></td></tr></table></figure>
+
+<p>产物：</p>
+<ul>
+<li>关节限位</li>
+<li>零点校准</li>
+<li>最大速度</li>
+<li>最大安全力矩</li>
+<li>温升测试</li>
+<li>负载测试</li>
+</ul>
+<h3 id="11-3-阶段三：多关节总线"><a href="#11-3-阶段三：多关节总线" class="headerlink" title="11.3 阶段三：多关节总线"></a>11.3 阶段三：多关节总线</h3><p>目标：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">3 to 6 drives</span><br><span class="line">  -&gt; CAN or EtherCAT bus</span><br><span class="line">  -&gt; cyclic command and feedback</span><br></pre></td></tr></table></figure>
+
+<p>产物：</p>
+<ul>
+<li>总线拓扑</li>
+<li>周期统计</li>
+<li>丢包或错误统计</li>
+<li>同步测试</li>
+<li>故障恢复流程</li>
+</ul>
+<h3 id="11-4-阶段四：ros2-control-接入"><a href="#11-4-阶段四：ros2-control-接入" class="headerlink" title="11.4 阶段四：ros2_control 接入"></a>11.4 阶段四：ros2_control 接入</h3><p>目标：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ros2_control hardware interface</span><br><span class="line">  -&gt; joint_state_broadcaster</span><br><span class="line">  -&gt; position / velocity / effort controller</span><br><span class="line">  -&gt; MoveIt 2 or custom controller</span><br></pre></td></tr></table></figure>
+
+<p>产物：</p>
+<ul>
+<li>URDF &#x2F; ros2_control 配置</li>
+<li>hardware_interface 代码</li>
+<li>launch 文件</li>
+<li>控制器配置</li>
+<li>rosbag2 日志</li>
+<li>Foxglove &#x2F; PlotJuggler 可视化</li>
+</ul>
+<hr>
+<h2 id="十二、调试时最常见的坑"><a href="#十二、调试时最常见的坑" class="headerlink" title="十二、调试时最常见的坑"></a>十二、调试时最常见的坑</h2><h3 id="12-1-电源不够"><a href="#12-1-电源不够" class="headerlink" title="12.1 电源不够"></a>12.1 电源不够</h3><p>电机空载能转，不代表带载能跑。</p>
+<p>常见问题：</p>
+<ul>
+<li>电源限流</li>
+<li>电压跌落</li>
+<li>制动回灌</li>
+<li>电源线过细</li>
+<li>接地不好</li>
+</ul>
+<h3 id="12-2-编码器方向反了"><a href="#12-2-编码器方向反了" class="headerlink" title="12.2 编码器方向反了"></a>12.2 编码器方向反了</h3><p>编码器方向错时，闭环可能直接发散。</p>
+<p>现象：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">command positive motion</span><br><span class="line">motor moves negative</span><br><span class="line">controller increases output</span><br><span class="line">motor runs away</span><br></pre></td></tr></table></figure>
+
+<p>上电调试时一定要低电流、低速度、手放急停。</p>
+<h3 id="12-3-电流环没调好就调位置环"><a href="#12-3-电流环没调好就调位置环" class="headerlink" title="12.3 电流环没调好就调位置环"></a>12.3 电流环没调好就调位置环</h3><p>如果 FOC 或电流反馈不稳定，位置环只会放大问题。</p>
+<p>顺序应该是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">sensor check</span><br><span class="line">  -&gt; motor calibration</span><br><span class="line">  -&gt; current limit</span><br><span class="line">  -&gt; velocity loop</span><br><span class="line">  -&gt; position loop</span><br><span class="line">  -&gt; load test</span><br></pre></td></tr></table></figure>
+
+<h3 id="12-4-控制频率写得很高，但实际抖动很大"><a href="#12-4-控制频率写得很高，但实际抖动很大" class="headerlink" title="12.4 控制频率写得很高，但实际抖动很大"></a>12.4 控制频率写得很高，但实际抖动很大</h3><p>看平均值不够，要看 max 和 p95。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mean looks good</span><br><span class="line">max spike causes instability</span><br></pre></td></tr></table></figure>
+
+<h3 id="12-5-没有日志"><a href="#12-5-没有日志" class="headerlink" title="12.5 没有日志"></a>12.5 没有日志</h3><p>硬件问题靠猜很痛苦。</p>
+<p>至少记录：</p>
+<ul>
+<li>command</li>
+<li>position</li>
+<li>velocity</li>
+<li>current</li>
+<li>voltage</li>
+<li>temperature</li>
+<li>error code</li>
+<li>bus cycle time</li>
+</ul>
+<hr>
+<h2 id="十三、开源项目怎么组合"><a href="#十三、开源项目怎么组合" class="headerlink" title="十三、开源项目怎么组合"></a>十三、开源项目怎么组合</h2><p>可以把常见项目放到这张地图里。</p>
+<p>电机控制入门：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/simplefoc/Arduino-FOC">SimpleFOC</a></li>
+</ul>
+<p>驱动器生态：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/odriverobotics/ODrive">ODrive</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/mjbots/moteus">moteus</a></li>
+<li>MIT Mini Cheetah Motor Driver</li>
+</ul>
+<p>EtherCAT 主站：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/OpenEtherCATsociety/SOEM">SOEM</a></li>
+<li><a target="_blank" rel="noopener" href="https://etherlab.org/en/ethercat/">IgH EtherCAT Master</a></li>
+</ul>
+<p>ROS 2 控制：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/ros-controls/ros2_control">ros2_control</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/ros-controls/ros2_controllers">ros2_controllers</a></li>
+</ul>
+<p>可视化和日志：</p>
+<ul>
+<li>PlotJuggler</li>
+<li>Foxglove</li>
+<li>rosbag2</li>
+</ul>
+<p>一条很现实的路线是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">SimpleFOC</span><br><span class="line">  -&gt; understand FOC basics</span><br><span class="line">ODrive or moteus</span><br><span class="line">  -&gt; build one servo joint</span><br><span class="line">CAN or EtherCAT</span><br><span class="line">  -&gt; connect multiple drives</span><br><span class="line">ros2_control</span><br><span class="line">  -&gt; expose standard joint interfaces</span><br><span class="line">MoveIt 2 or custom controller</span><br><span class="line">  -&gt; run robot task</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="十四、如何写进履历"><a href="#十四、如何写进履历" class="headerlink" title="十四、如何写进履历"></a>十四、如何写进履历</h2><p>不要这样写：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">熟悉机器人硬件，了解 BLDC、EtherCAT 和 ROS 2。</span><br></pre></td></tr></table></figure>
+
+<p>这句话太泛。</p>
+<p>更好的写法是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">基于 ODrive / BLDC / 磁编码器搭建单关节伺服模块，完成电机参数辨识、编码器校准、速度环和位置环调试；</span><br><span class="line">记录电流限制、阶跃响应、温升和故障码处理流程，并将关节状态发布到 ROS 2。</span><br></pre></td></tr></table></figure>
+
+<p>如果做了 EtherCAT：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">基于 SOEM 搭建 6 轴 EtherCAT 电机控制链路，实现 1 kHz 周期命令下发和状态回读；</span><br><span class="line">完成 PDO 映射、从站状态机切换、故障恢复、周期抖动统计和急停联动。</span><br></pre></td></tr></table></figure>
+
+<p>如果接了 ros2_control：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">实现 ros2_control hardware_interface，将自研 / EtherCAT 关节驱动封装为 position、velocity、effort 接口；</span><br><span class="line">接入 controller_manager、joint_state_broadcaster 和轨迹控制器，支持 rosbag2 记录与 PlotJuggler 调试。</span><br></pre></td></tr></table></figure>
+
+<p>这类描述比“会用 ROS 2”强很多。</p>
+<p>因为它说明你真的把软件接到了电机。</p>
+<hr>
+<h2 id="十五、截至-2026-年-5-月的前沿观察"><a href="#十五、截至-2026-年-5-月的前沿观察" class="headerlink" title="十五、截至 2026 年 5 月的前沿观察"></a>十五、截至 2026 年 5 月的前沿观察</h2><p>第一，低成本 BLDC 驱动生态越来越成熟。</p>
+<p>SimpleFOC、ODrive、moteus 让个人开发者能用相对低成本接触 FOC、编码器、伺服控制和总线通信。这对作品集非常友好。</p>
+<p>第二，ROS 2 控制框架正在变成真实机器人项目的常用抽象层。</p>
+<p>ros2_control 的价值不只是“有控制器插件”，而是把硬件接口标准化。只要硬件接口写得稳，上层控制器、仿真和真机更容易保持一致。</p>
+<p>第三，EtherCAT 仍然是高性能多轴伺服的重要路线。</p>
+<p>工业伺服、机械臂和部分人形平台仍会大量使用 EtherCAT。它的门槛比 CAN 高，但一旦掌握，工程含金量非常高。</p>
+<p>第四，硬件和学习算法正在更紧地结合。</p>
+<p>模仿学习、VLA 和强化学习最终都需要低延迟、安全、可记录的硬件接口。未来能同时讲清楚策略和硬件闭环的人，会比只会单侧的人更稀缺。</p>
+<hr>
+<h2 id="十六、这篇的核心结论"><a href="#十六、这篇的核心结论" class="headerlink" title="十六、这篇的核心结论"></a>十六、这篇的核心结论</h2><p>机器人硬件不是算法的附属品。</p>
+<p>它决定了算法能不能真实落地。</p>
+<p>这篇最重要的结论有六个：</p>
+<ol>
+<li>BLDC 适合机器人，是因为功率密度高、响应快、适合伺服和力矩控制。</li>
+<li>FOC 的工程意义是把电机电流变成可控力矩，而不是一个只存在于公式里的概念。</li>
+<li>电机、编码器、减速器和驱动器必须一起选，不能只看单个参数。</li>
+<li>EtherCAT、CAN、RS485 没有绝对优劣，关键是控制频率、同步、成本和驱动器支持。</li>
+<li>ros2_control 是硬件抽象层，能把真实关节接进 ROS 2 控制体系。</li>
+<li>能写进履历的硬件项目必须有接线、校准、控制响应、实时周期、故障恢复和安全链路。</li>
+</ol>
+<p>如果你想做一个最小但有含金量的硬件作品集，我建议从这个目标开始：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">build one BLDC servo joint</span><br><span class="line">  -&gt; tune velocity and position loop</span><br><span class="line">  -&gt; log current, velocity and position</span><br><span class="line">  -&gt; expose it through ros2_control</span><br><span class="line">  -&gt; run a repeatable motion test</span><br><span class="line">  -&gt; document failure and safety handling</span><br></pre></td></tr></table></figure>
+
+<p>做到这里，你就不只是“懂一点硬件”，而是开始真正接近机器人系统工程了。</p>
+<hr>
+<h2 id="参考项目与资料"><a href="#参考项目与资料" class="headerlink" title="参考项目与资料"></a>参考项目与资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/odriverobotics/ODrive">ODrive</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.odriverobotics.com/">ODrive Docs</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/simplefoc/Arduino-FOC">SimpleFOC</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.simplefoc.com/">SimpleFOC Docs</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/mjbots/moteus">moteus</a></li>
+<li><a target="_blank" rel="noopener" href="https://mjbots.com/products/moteus-r4">moteus Docs</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/OpenEtherCATsociety/SOEM">SOEM</a></li>
+<li><a target="_blank" rel="noopener" href="https://etherlab.org/en/ethercat/">IgH EtherCAT Master</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/ros-controls/ros2_control">ros2_control</a></li>
+<li><a target="_blank" rel="noopener" href="https://control.ros.org/">ros2_control Docs</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.ros.org/en/rolling/Releases/Release-Lyrical-Luth.html">ROS 2 Lyrical Luth</a></li>
+</ul>
+<hr>
+<h2 id="系列导航"><a href="#系列导航" class="headerlink" title="系列导航"></a>系列导航</h2><p>本篇在系列中的位置：</p>
+<p><code>总路线图 -&gt; 数学基础 -&gt; 坐标系 -&gt; 运动学 -&gt; 概率滤波 -&gt; 感知与三维理解 -&gt; 机械臂控制 -&gt; 接触抓取 -&gt; 四足控制 -&gt; 人形控制基础 -&gt; 人形全身控制 -&gt; QP 实现 -&gt; 接触力分配 -&gt; 状态估计 -&gt; 仿真实战 -&gt; ROS 2 工程 -&gt; 机器人强化学习 -&gt; 机器人模仿学习 -&gt; VLA 大模型 -&gt; 机器人硬件</code></p>
+<ul>
+<li>上一篇：<a href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</a></li>
+<li>回到总路线：<a href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</a></li>
+</ul>
+<link rel="stylesheet" href="/css/spoiler.css" type="text/css"><script src="/js/spoiler.js" type="text/javascript" async></script></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://LJS515.github.io/">YiQiu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://ljs515.github.io/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT%E4%B8%8Eros2_control/">https://ljs515.github.io/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT%E4%B8%8Eros2_control/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://ljs515.github.io" target="_blank">YiQiuのblog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD/">具身智能</a><a class="post-meta__tags" href="/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA/">机器人</a><a class="post-meta__tags" href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/">开源项目</a><a class="post-meta__tags" href="/tags/ros2-control/">ros2_control</a><a class="post-meta__tags" href="/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6/">机器人硬件</a><a class="post-meta__tags" href="/tags/BLDC/">BLDC</a><a class="post-meta__tags" href="/tags/FOC/">FOC</a><a class="post-meta__tags" href="/tags/ODrive/">ODrive</a><a class="post-meta__tags" href="/tags/EtherCAT/">EtherCAT</a></div><div class="post-share"><div class="social-share" data-image="/images/post-covers/hardware.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>感谢您的支持</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechat.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wechat.jpg" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpg" alt="alipay"/></a><div class="post-qr-code-desc">alipay</div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width no-desc" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"><img class="cover" src="/images/post-covers/vla.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related no-desc" href="/2026/05/23/ROS2%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8Erosbag%E8%B0%83%E8%AF%95/" title="ROS 2 工程指南：节点、TF、控制环与 rosbag 调试"><img class="cover" src="/images/post-covers/ros2.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-23</div><div class="info-item-2">ROS 2 工程指南：节点、TF、控制环与 rosbag 调试</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"><img class="cover" src="/images/post-covers/vla.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/" title="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示"><img class="cover" src="/images/post-covers/perception-3d.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-22</div><div class="info-item-2">具身智能中的感知与三维理解：相机、SLAM 与 3D 表示</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"><img class="cover" src="/images/post-covers/roadmap.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/24/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E5%85%A5%E9%97%A8%EF%BC%9APPO%E3%80%81legged_gym%E4%B8%8ESim2Real/" title="机器人强化学习入门：PPO、legged_gym 与 Sim2Real"><img class="cover" src="/images/post-covers/reinforcement-learning.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-24</div><div class="info-item-2">机器人强化学习入门：PPO、legged_gym 与 Sim2Real</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/23/%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BB%BF%E7%9C%9F%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BB%8EURDF%E5%88%B0IsaacLab%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83/" title="机器人仿真实战：从 URDF 到 Isaac Lab 并行训练"><img class="cover" src="/images/post-covers/simulation.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-23</div><div class="info-item-2">机器人仿真实战：从 URDF 到 Isaac Lab 并行训练</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="author-info-name">YiQiu</div><div class="author-info-description">专注于嵌入式技术研究 | ROS学习之路 | 深度学习&人工智能 | 算法研究</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">22</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">57</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" href="https://LJS515.github.io/"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/LJS515" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:3435583503@qq.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><style>
+.announcement-card {
+    --main-color: #ff00ff;
+    --secondary-color: #00ffff;
+    --highlight-color: #ff5500;
+    position: relative;
+    overflow: hidden;
+}
+.announcement-content {
+    font-size: 1rem; 
+    line-height: 1.2; 
+    color: #ffffff;
+    position: relative;
+}
+.keyword {
+    color: var(--secondary-color);
+    font-weight: 300;
+    font-size: 1.1rem; 
+}
+.highlight {
+    color: var(--main-color);
+    font-weight: 1000;
+    font-size: 1.2rem; 
+}
+.announcement-content ul {
+    list-style-type: none;
+    margin: 0.8rem 0; 
+    padding-left: 1.5rem;   
+}
+</style>
+<div class="announcement-card">
+    <div class="announcement-content">
+        <p><span class="highlight">欢迎来到「YiQiu」ROS&AI研习录</span>！🎉</p>
+        <p><strong>本平台专注于：</strong></p>
+        <ul>
+            <li><span class="keyword">> 嵌入式系统开发</span></li>
+            <li><span class="keyword">> ROS学习</span></li>
+            <li><span class="keyword">> 算法研究</span></li>
+            <li><span class="keyword">> 深度学习&人工智能</span></li>
+        </ul>
+        <p>🌟 <strong>加入我们，一起探索机器人的奥秘，提升AI实战能力，共同创造更美好的人工智能！</strong></p>
+    </div>
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT-%E4%B8%8E-ros2-control"><span class="toc-number">1.</span> <span class="toc-text">机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E7%A1%AC%E4%BB%B6%E5%B1%82%E8%A7%A3%E5%86%B3%E7%9A%84%E4%B8%8D%E6%98%AF%E2%80%9C%E4%BC%9A%E4%B8%8D%E4%BC%9A%E8%BD%AC%E2%80%9D"><span class="toc-number">1.1.</span> <span class="toc-text">一、硬件层解决的不是“会不会转”</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%B8%B8%E7%94%A8-BLDC"><span class="toc-number">1.2.</span> <span class="toc-text">二、为什么机器人常用 BLDC</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81FOC%EF%BC%9A%E6%8A%8A%E7%94%B5%E6%B5%81%E5%8F%98%E6%88%90%E5%8F%AF%E6%8E%A7%E5%8A%9B%E7%9F%A9"><span class="toc-number">1.3.</span> <span class="toc-text">三、FOC：把电流变成可控力矩</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E7%94%B5%E6%9C%BA%E3%80%81%E5%87%8F%E9%80%9F%E5%99%A8%E5%92%8C%E7%BC%96%E7%A0%81%E5%99%A8%E8%A6%81%E4%B8%80%E8%B5%B7%E7%9C%8B"><span class="toc-number">1.4.</span> <span class="toc-text">四、电机、减速器和编码器要一起看</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81ODrive%E3%80%81SimpleFOC%E3%80%81moteus-%E5%90%84%E8%87%AA%E9%80%82%E5%90%88%E5%AD%A6%E4%BB%80%E4%B9%88"><span class="toc-number">1.5.</span> <span class="toc-text">五、ODrive、SimpleFOC、moteus 各自适合学什么</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-SimpleFOC%EF%BC%9A%E7%90%86%E8%A7%A3-FOC-%E7%9A%84%E4%BD%8E%E9%97%A8%E6%A7%9B%E5%85%A5%E5%8F%A3"><span class="toc-number">1.5.1.</span> <span class="toc-text">5.1 SimpleFOC：理解 FOC 的低门槛入口</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-ODrive%EF%BC%9A%E6%8A%8A%E7%94%B5%E6%9C%BA%E9%A9%B1%E5%8A%A8%E5%B7%A5%E7%A8%8B%E8%B7%91%E5%AE%8C%E6%95%B4"><span class="toc-number">1.5.2.</span> <span class="toc-text">5.2 ODrive：把电机驱动工程跑完整</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-moteus%EF%BC%9A%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%B3%E8%8A%82%E6%8E%A7%E5%88%B6%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%8F%82%E8%80%83"><span class="toc-number">1.5.3.</span> <span class="toc-text">5.3 moteus：机器人关节控制的工程参考</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E6%80%BB%E7%BA%BF%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E5%A4%9A%E5%85%B3%E8%8A%82%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%8D%E8%83%BD%E9%9D%A0%E4%B8%80%E5%A0%86-USB"><span class="toc-number">1.6.</span> <span class="toc-text">六、总线：为什么多关节机器人不能靠一堆 USB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81EtherCAT%EF%BC%9A%E5%B7%A5%E4%B8%9A%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%87%8C%E5%B8%B8%E8%A7%81%E7%9A%84%E5%AE%9E%E6%97%B6%E6%80%BB%E7%BA%BF"><span class="toc-number">1.7.</span> <span class="toc-text">七、EtherCAT：工业机器人里常见的实时总线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81ros2-control%EF%BC%9A%E6%8A%8A%E7%A1%AC%E4%BB%B6%E6%8E%A5%E8%BF%9B-ROS-2-%E6%8E%A7%E5%88%B6%E4%BD%93%E7%B3%BB"><span class="toc-number">1.8.</span> <span class="toc-text">八、ros2_control：把硬件接进 ROS 2 控制体系</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E5%AE%9E%E6%97%B6%E6%8E%A7%E5%88%B6%E7%8E%AF%EF%BC%9A1-kHz-%E4%B8%8D%E6%98%AF%E5%8F%A3%E5%8F%B7"><span class="toc-number">1.9.</span> <span class="toc-text">九、实时控制环：1 kHz 不是口号</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E5%AE%89%E5%85%A8%E9%93%BE%E8%B7%AF%EF%BC%9A%E6%80%A5%E5%81%9C%E4%B8%8D%E6%98%AF-UI-%E6%8C%89%E9%92%AE"><span class="toc-number">1.10.</span> <span class="toc-text">十、安全链路：急停不是 UI 按钮</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E4%BB%8E%E5%8D%95%E7%94%B5%E6%9C%BA%E5%88%B0-6-%E8%BD%B4%E6%9C%BA%E6%A2%B0%E8%87%82%E7%9A%84%E5%AE%9E%E8%B7%B5%E8%B7%AF%E7%BA%BF"><span class="toc-number">1.11.</span> <span class="toc-text">十一、从单电机到 6 轴机械臂的实践路线</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-%E9%98%B6%E6%AE%B5%E4%B8%80%EF%BC%9A%E5%8D%95%E7%94%B5%E6%9C%BA-FOC"><span class="toc-number">1.11.1.</span> <span class="toc-text">11.1 阶段一：单电机 FOC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-%E9%98%B6%E6%AE%B5%E4%BA%8C%EF%BC%9A%E5%8D%95%E5%85%B3%E8%8A%82%E6%A8%A1%E5%9D%97"><span class="toc-number">1.11.2.</span> <span class="toc-text">11.2 阶段二：单关节模块</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-3-%E9%98%B6%E6%AE%B5%E4%B8%89%EF%BC%9A%E5%A4%9A%E5%85%B3%E8%8A%82%E6%80%BB%E7%BA%BF"><span class="toc-number">1.11.3.</span> <span class="toc-text">11.3 阶段三：多关节总线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-4-%E9%98%B6%E6%AE%B5%E5%9B%9B%EF%BC%9Aros2-control-%E6%8E%A5%E5%85%A5"><span class="toc-number">1.11.4.</span> <span class="toc-text">11.4 阶段四：ros2_control 接入</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81%E8%B0%83%E8%AF%95%E6%97%B6%E6%9C%80%E5%B8%B8%E8%A7%81%E7%9A%84%E5%9D%91"><span class="toc-number">1.12.</span> <span class="toc-text">十二、调试时最常见的坑</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#12-1-%E7%94%B5%E6%BA%90%E4%B8%8D%E5%A4%9F"><span class="toc-number">1.12.1.</span> <span class="toc-text">12.1 电源不够</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-2-%E7%BC%96%E7%A0%81%E5%99%A8%E6%96%B9%E5%90%91%E5%8F%8D%E4%BA%86"><span class="toc-number">1.12.2.</span> <span class="toc-text">12.2 编码器方向反了</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-3-%E7%94%B5%E6%B5%81%E7%8E%AF%E6%B2%A1%E8%B0%83%E5%A5%BD%E5%B0%B1%E8%B0%83%E4%BD%8D%E7%BD%AE%E7%8E%AF"><span class="toc-number">1.12.3.</span> <span class="toc-text">12.3 电流环没调好就调位置环</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-4-%E6%8E%A7%E5%88%B6%E9%A2%91%E7%8E%87%E5%86%99%E5%BE%97%E5%BE%88%E9%AB%98%EF%BC%8C%E4%BD%86%E5%AE%9E%E9%99%85%E6%8A%96%E5%8A%A8%E5%BE%88%E5%A4%A7"><span class="toc-number">1.12.4.</span> <span class="toc-text">12.4 控制频率写得很高，但实际抖动很大</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-5-%E6%B2%A1%E6%9C%89%E6%97%A5%E5%BF%97"><span class="toc-number">1.12.5.</span> <span class="toc-text">12.5 没有日志</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%89%E3%80%81%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE%E6%80%8E%E4%B9%88%E7%BB%84%E5%90%88"><span class="toc-number">1.13.</span> <span class="toc-text">十三、开源项目怎么组合</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E5%9B%9B%E3%80%81%E5%A6%82%E4%BD%95%E5%86%99%E8%BF%9B%E5%B1%A5%E5%8E%86"><span class="toc-number">1.14.</span> <span class="toc-text">十四、如何写进履历</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%94%E3%80%81%E6%88%AA%E8%87%B3-2026-%E5%B9%B4-5-%E6%9C%88%E7%9A%84%E5%89%8D%E6%B2%BF%E8%A7%82%E5%AF%9F"><span class="toc-number">1.15.</span> <span class="toc-text">十五、截至 2026 年 5 月的前沿观察</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E5%85%AD%E3%80%81%E8%BF%99%E7%AF%87%E7%9A%84%E6%A0%B8%E5%BF%83%E7%BB%93%E8%AE%BA"><span class="toc-number">1.16.</span> <span class="toc-text">十六、这篇的核心结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83%E9%A1%B9%E7%9B%AE%E4%B8%8E%E8%B5%84%E6%96%99"><span class="toc-number">1.17.</span> <span class="toc-text">参考项目与资料</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%B3%BB%E5%88%97%E5%AF%BC%E8%88%AA"><span class="toc-number">1.18.</span> <span class="toc-text">系列导航</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT%E4%B8%8Eros2_control/" title="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control"><img src="/images/post-covers/hardware.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control"/></a><div class="content"><a class="title" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT%E4%B8%8Eros2_control/" title="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control">机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control</a><time datetime="2026-05-25T08:45:00.000Z" title="发表于 2026-05-25 16:45:00">2026-05-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"><img src="/images/post-covers/vla.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"/></a><div class="content"><a class="title" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</a><time datetime="2026-05-25T04:05:00.000Z" title="发表于 2026-05-25 12:05:00">2026-05-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E5%AE%9E%E6%88%98%EF%BC%9ADiffusion%20Policy%E3%80%81ACT%E4%B8%8ELeRobot/" title="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot"><img src="/images/post-covers/imitation-learning.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot"/></a><div class="content"><a class="title" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E5%AE%9E%E6%88%98%EF%BC%9ADiffusion%20Policy%E3%80%81ACT%E4%B8%8ELeRobot/" title="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot">机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot</a><time datetime="2026-05-25T02:45:00.000Z" title="发表于 2026-05-25 10:45:00">2026-05-25</time></div></div></div></div></div></div></main><footer id="footer" style="background-color: rgba(45, 10, 61, 0.2);"><div class="footer-other"><div class="footer-copyright"></div><div class="footer_custom_text"><style>
+  .footer {
+    text-align: center;
+    position: relative;
+  }
+  .social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .social-links i {
+    color: #8400ff;
+  }
+  .social-link {
+    color: #8a2be2;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: rgba(138, 43, 226, 0.1);
+  }
+  .social-link:hover {
+    color: #ffffff;
+    background: #892be2;
+    transform: translateY(-3px) scale(1.08);
+    box-shadow: 0 5px 15px rgba(138, 43, 226, 0.4);
+    text-decoration: none !important;
+  }
+  .footer p {
+    margin: 0.5rem 0;
+    line-height: 1.4;
+  }
+  .copyright {
+    font-size: 1.1rem;
+    color: #c08bdf;
+    font-weight: 400;
+  }
+  .tagline {
+    font-size: 0.8rem;
+    color: #8a2be2;
+    font-style: italic;
+    font-weight: 500;
+  }
+  .footer-note {
+    font-size: 0.78rem;
+    color: rgba(219, 142, 255, 0.8);
+  }
+</style>
+<div class="footer">
+  <div class="social-links">
+    <a href="https://github.com/LJS515" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+    <a href="https://blog.csdn.net/2401_84593538" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="CSDN" title="CSDN">
+      <i class="fas fa-code"></i>
+    </a>
+    <a href="https://www.xiaohongshu.com/user/profile/5e8a0aae0000000001002ce4" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="小红书" title="小红书">
+      <i class="fas fa-book"></i>
+    </a>
+    <a href="https://space.bilibili.com/1158177941" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="bilibili" title="bilibili">
+      <i class="fab fa-bilibili"></i>
+    </a>
+  </div>
+  <p class="copyright">© 2025 YiQiuのblog</p>
+  <p class="tagline">&gt; Stay curious, stay hacking, stay anime! &lt;</p>
+  <p class="footer-note">静态站点不再展示伪造访问量。后续如需真实统计，建议接入 Umami、Google Analytics 或 Cloudflare Web Analytics。</p>
+</div>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.2"></script><script src="/js/main.js?v=5.5.2"></script><div class="js-pjax"></div><script defer src="/js/cursor.js"></script><script src="/js/sakura.js"></script><meting-js class="no-destroy" id="8932390" server="netease" type="playlist" fixed="true" autoplay="true" order="random" volume="0.3" list-folded="false" list-max-height="36vh"> </meting-js><link rel="stylesheet" href="https://npm.elemecdn.com/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'"><script src="https://npm.elemecdn.com/aplayer/dist/APlayer.min.js"></script><script src="https://npm.elemecdn.com/meting/dist/Meting.min.js"></script><script>(() => {
+  const destroyAplayer = () => {
+    if (window.aplayers) {
+      for (let i = 0; i < window.aplayers.length; i++) {
+        if (!window.aplayers[i].options.fixed) {
+          window.aplayers[i].destroy()
+        }
+      }
+    }
+  }
+
+  const runMetingJS = () => {
+    typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+  }
+
+  btf.addGlobalFn('pjaxSend', destroyAplayer, 'destroyAplayer')
+  btf.addGlobalFn('pjaxComplete', loadMeting, 'runMetingJS')
+})()</script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      const usePjax = true
+      true
+        ? (usePjax ? pjax.loadUrl('/404.html') : window.location.href = '/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})()</script><script async data-pjax src="/"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词..." type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.2"></script></div></div><!-- hexo injector body_end start --><script data-pjax>
+  function butterfly_categories_card_injector_config(){
+    // 检查容器是否存在
+    var parent_div_git = document.getElementById('recent-posts');
+    // 如果容器不存在，则动态创建
+    if (!parent_div_git) {
+      console.warn('butterfly_categories_card: 挂载容器不存在，正在动态创建...');
+      // 创建新容器（默认插入到页面主体顶部）
+      parent_div_git = document.createElement('div');
+      parent_div_git.id = 'recent-posts'; // 赋予配置的ID
+      document.querySelector('#page').prepend(parent_div_git); // 插入到 #content-inner 内
+    }
+    var item_html = '<style>li.categoryBar-list-item{width:32.3%;}.categoryBar-list{max-height: 950px;overflow:auto;}.categoryBar-list::-webkit-scrollbar{width:0!important}@media screen and (max-width: 650px){.categoryBar-list{max-height: 800px;}}</style><div class="recent-post-item" style="height:auto;width:100%;padding:0px;"><div id="categoryBar"><ul class="categoryBar-list"><li class="categoryBar-list-item" style="background:url(/img/11.png);"> <a class="categoryBar-list-link" onclick="pjax.loadUrl(&quot;/categories/具身智能教程/&quot;);" href="javascript:void(0);">具身智能教程</a><span class="categoryBar-list-count">20</span><span class="categoryBar-list-descr">1</span></li></ul></div></div>';
+    console.log('已挂载 butterfly_categories_card');
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+  }
+  // 路径匹配逻辑（使用 startsWith）
+  if (location.pathname.startsWith('/categories/') || '/categories/' === 'all') {
+    butterfly_categories_card_injector_config();
+  }
+  </script><script data-pjax>
+  function butterfly_swiper_injector_config(){
+    var parent_div_git = document.getElementById('recent-posts');
+    var item_html = '<div class="recent-post-item" style="height: auto;width: 100%"><div class="blog-slider swiper-container-fade swiper-container-horizontal" id="swiper_container"><div class="blog-slider__wrp swiper-wrapper" style="transition-duration: 0ms;"></div><div class="blog-slider__pagination swiper-pagination-clickable swiper-pagination-bullets"></div></div></div>';
+    console.log('已挂载butterfly_swiper')
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+    }
+  var elist = 'undefined'.split(',');
+  var cpage = location.pathname;
+  var epage = '/';
+  var flag = 0;
+
+  for (var i=0;i<elist.length;i++){
+    if (cpage.includes(elist[i])){
+      flag++;
+    }
+  }
+
+  if ((epage ==='all')&&(flag == 0)){
+    butterfly_swiper_injector_config();
+  }
+  else if (epage === cpage){
+    butterfly_swiper_injector_config();
+  }
+  </script><script defer src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.js"></script><script defer data-pjax src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper_init.js"></script><!-- hexo injector body_end end --><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"right","width":200,"height":400},"mobile":{"show":true},"react":{"opacity":0.7},"log":false});</script></body></html>
