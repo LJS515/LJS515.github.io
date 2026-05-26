@@ -1,0 +1,792 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>机器人部署与上线：ONNX、TensorRT、安全包络与影子模式 | YiQiuのblog</title><meta name="author" content="YiQiu"><meta name="copyright" content="YiQiu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#f5f0fa"><meta name="description" content="机器人部署与上线：ONNX、TensorRT、安全包络与影子模式 前面我们已经把机器人系统的几条关键线索铺开了：  数学、运动学、状态估计 感知、机械臂、腿式和人形控制 仿真、ROS 2、强化学习、模仿学习、VLA 电机、驱动器、总线和 ros2_control  到这里，一个机器人项目经常会进入最容易被低估的一段： 部署与上线。 很多项目在论文、视频和实验室 demo 里看起来已经完成了，但一旦">
+<meta property="og:type" content="article">
+<meta property="og:title" content="机器人部署与上线：ONNX、TensorRT、安全包络与影子模式">
+<meta property="og:url" content="https://ljs515.github.io/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%83%A8%E7%BD%B2%E4%B8%8E%E4%B8%8A%E7%BA%BF%EF%BC%9AONNX%E3%80%81TensorRT%E3%80%81%E5%AE%89%E5%85%A8%E5%8C%85%E7%BB%9C%E4%B8%8E%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F/index.html">
+<meta property="og:site_name" content="YiQiuのblog">
+<meta property="og:description" content="机器人部署与上线：ONNX、TensorRT、安全包络与影子模式 前面我们已经把机器人系统的几条关键线索铺开了：  数学、运动学、状态估计 感知、机械臂、腿式和人形控制 仿真、ROS 2、强化学习、模仿学习、VLA 电机、驱动器、总线和 ros2_control  到这里，一个机器人项目经常会进入最容易被低估的一段： 部署与上线。 很多项目在论文、视频和实验室 demo 里看起来已经完成了，但一旦">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ljs515.github.io/images/post-covers/deployment.png">
+<meta property="article:published_time" content="2026-05-25T09:45:00.000Z">
+<meta property="article:modified_time" content="2026-05-25T10:25:06.700Z">
+<meta property="article:author" content="YiQiu">
+<meta property="article:tag" content="具身智能">
+<meta property="article:tag" content="机器人">
+<meta property="article:tag" content="开源项目">
+<meta property="article:tag" content="部署">
+<meta property="article:tag" content="ONNX">
+<meta property="article:tag" content="TensorRT">
+<meta property="article:tag" content="ONNX Runtime">
+<meta property="article:tag" content="安全">
+<meta property="article:tag" content="影子模式">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ljs515.github.io/images/post-covers/deployment.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "机器人部署与上线：ONNX、TensorRT、安全包络与影子模式",
+  "url": "https://ljs515.github.io/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%83%A8%E7%BD%B2%E4%B8%8E%E4%B8%8A%E7%BA%BF%EF%BC%9AONNX%E3%80%81TensorRT%E3%80%81%E5%AE%89%E5%85%A8%E5%8C%85%E7%BB%9C%E4%B8%8E%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F/",
+  "image": "https://ljs515.github.io/images/post-covers/deployment.png",
+  "datePublished": "2026-05-25T09:45:00.000Z",
+  "dateModified": "2026-05-25T10:25:06.700Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YiQiu",
+      "url": "https://LJS515.github.io/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/01.png"><link rel="canonical" href="https://ljs515.github.io/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%83%A8%E7%BD%B2%E4%B8%8E%E4%B8%8A%E7%BA%BF%EF%BC%9AONNX%E3%80%81TensorRT%E3%80%81%E5%AE%89%E5%85%A8%E5%8C%85%E7%BB%9C%E4%B8%8E%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.2"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#2d0a3d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f5f0fa')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chewy&amp;family=Ma+Shan+Zheng&amp;family=Fredoka+One&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":300,"languages":{"author":"作者: YiQiu","link":"链接: ","source":"来源: YiQiuのblog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '机器人部署与上线：ONNX、TensorRT、安全包络与影子模式',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Chewy&family=Fredoka+One&family=Caveat:wght@400;700&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet"><!-- hexo injector head_end start --><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiperstyle.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="/css/categorybar.css"><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-image: url(/img/03.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">23</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">63</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/images/post-covers/deployment.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/img/01.png" alt="Logo"><span class="site-name">YiQiuのblog</span></a><a class="nav-page-title" href="/"><span class="site-name">机器人部署与上线：ONNX、TensorRT、安全包络与影子模式</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">机器人部署与上线：ONNX、TensorRT、安全包络与影子模式</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-05-25T09:45:00.000Z" title="发表于 2026-05-25 17:45:00">2026-05-25</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-05-25T10:25:06.700Z" title="更新于 2026-05-25 18:25:06">2026-05-25</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%95%99%E7%A8%8B/">具身智能教程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">3.5k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>12分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div class="ai-summary"><div class="ai-explanation" style="display: block;" data-summary="这篇文章从机器人工程视角讲清楚机器人策略从训练到真机上线的完整链路，重点解释 PyTorch 到 ONNX、TensorRT / ONNX Runtime 推理加速、边缘设备部署、安全包络、影子模式、灰度发布、日志回流和失败复盘。 文章给出一条能写进履历的机器人部署实践路线，帮助把“能跑 demo”推进到“能稳定交付”。">YiQiuAI正在绞尽脑汁想思路ING···</div><div class="ai-title"> <div class="ai-title-left"> <i class="fa-brands fa-slack"></i><div class="ai-title-text">YiQiuのAI摘要</div></div><div class="ai-tag" id="ai-tag">HunYuan-Lite</div></div></div><div id="post-outdate-notice" data="{&quot;limitDay&quot;:365,&quot;messagePrev&quot;:&quot;本文最后更新于&quot;,&quot;messageNext&quot;:&quot;天前，部分内容可能已失效&quot;,&quot;postUpdate&quot;:&quot;2026-05-25 18:25:06&quot;}" hidden></div><h1 id="机器人部署与上线：ONNX、TensorRT、安全包络与影子模式"><a href="#机器人部署与上线：ONNX、TensorRT、安全包络与影子模式" class="headerlink" title="机器人部署与上线：ONNX、TensorRT、安全包络与影子模式"></a>机器人部署与上线：ONNX、TensorRT、安全包络与影子模式</h1><p><img src="/images/post-covers/deployment.png" alt="机器人部署封面"></p>
+<p>前面我们已经把机器人系统的几条关键线索铺开了：</p>
+<ul>
+<li>数学、运动学、状态估计</li>
+<li>感知、机械臂、腿式和人形控制</li>
+<li>仿真、ROS 2、强化学习、模仿学习、VLA</li>
+<li>电机、驱动器、总线和 ros2_control</li>
+</ul>
+<p>到这里，一个机器人项目经常会进入最容易被低估的一段：</p>
+<p><strong>部署与上线。</strong></p>
+<p>很多项目在论文、视频和实验室 demo 里看起来已经完成了，但一旦要放到真实机器人上稳定运行，就会暴露出另一类问题：</p>
+<ul>
+<li>模型推理太慢</li>
+<li>PyTorch 环境太重</li>
+<li>算子导出失败</li>
+<li>边缘设备显存不够</li>
+<li>控制周期被推理阻塞</li>
+<li>策略偶发输出危险动作</li>
+<li>真机失败没有日志</li>
+<li>新模型上线后没有回退路径</li>
+</ul>
+<p>所以这篇文章的目标不是讲“怎么点一下 export”，而是讲一条完整工程链路：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">training checkpoint</span><br><span class="line">  -&gt; export</span><br><span class="line">  -&gt; optimize</span><br><span class="line">  -&gt; runtime</span><br><span class="line">  -&gt; inference node</span><br><span class="line">  -&gt; robot controller</span><br><span class="line">  -&gt; safety envelope</span><br><span class="line">  -&gt; shadow mode</span><br><span class="line">  -&gt; monitoring</span><br><span class="line">  -&gt; data replay</span><br><span class="line">  -&gt; rollback or retrain</span><br></pre></td></tr></table></figure>
+
+<p>这也是机器人项目从“能跑”到“能交付”的分界线。</p>
+<hr>
+<h2 id="一、部署不是把-checkpoint-拷到机器人上"><a href="#一、部署不是把-checkpoint-拷到机器人上" class="headerlink" title="一、部署不是把 checkpoint 拷到机器人上"></a>一、部署不是把 checkpoint 拷到机器人上</h2><p>很多学习型机器人项目的训练阶段是这样的：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">PyTorch</span><br><span class="line">  -&gt; train policy</span><br><span class="line">  -&gt; save checkpoint</span><br><span class="line">  -&gt; evaluate video</span><br></pre></td></tr></table></figure>
+
+<p>这还不算部署。</p>
+<p>真正部署时，你还要回答：</p>
+<ul>
+<li>模型输入从哪里来</li>
+<li>图像预处理是否和训练一致</li>
+<li>推理是否满足控制频率</li>
+<li>输出动作是否需要反归一化</li>
+<li>动作是否经过安全限幅</li>
+<li>异常时谁接管</li>
+<li>新模型是否能回退</li>
+<li>失败数据如何记录</li>
+</ul>
+<p>部署链路可以写成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">camera / state</span><br><span class="line">  -&gt; preprocessing</span><br><span class="line">  -&gt; inference runtime</span><br><span class="line">  -&gt; action postprocessing</span><br><span class="line">  -&gt; safety check</span><br><span class="line">  -&gt; controller command</span><br><span class="line">  -&gt; robot motion</span><br><span class="line">  -&gt; logs and metrics</span><br></pre></td></tr></table></figure>
+
+<p>如果这条链路没有打通，就算模型在训练集上表现再好，真机上也可能不可靠。</p>
+<hr>
+<h2 id="二、为什么要从-PyTorch-导出"><a href="#二、为什么要从-PyTorch-导出" class="headerlink" title="二、为什么要从 PyTorch 导出"></a>二、为什么要从 PyTorch 导出</h2><p>训练时用 PyTorch 很舒服。</p>
+<p>但真机部署时，直接跑 PyTorch 可能遇到问题：</p>
+<ul>
+<li>环境依赖重</li>
+<li>启动慢</li>
+<li>显存占用高</li>
+<li>推理延迟不稳定</li>
+<li>边缘设备支持有限</li>
+<li>和 C++ 控制栈集成麻烦</li>
+</ul>
+<p>所以常见路线是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">PyTorch checkpoint</span><br><span class="line">  -&gt; ONNX</span><br><span class="line">  -&gt; optimized runtime</span><br><span class="line">  -&gt; robot inference node</span><br></pre></td></tr></table></figure>
+
+<p>ONNX 的价值是中间表示。</p>
+<p>它让模型从训练框架里解耦出来，方便交给不同推理后端：</p>
+<ul>
+<li>ONNX Runtime</li>
+<li>TensorRT</li>
+<li>OpenVINO</li>
+<li>TVM</li>
+<li>其他厂商运行时</li>
+</ul>
+<p>但 ONNX 不是万能转换器。</p>
+<p>你必须检查：</p>
+<ul>
+<li>算子是否支持</li>
+<li>动态 shape 是否正确</li>
+<li>输入输出名字是否稳定</li>
+<li>数值误差是否可接受</li>
+<li>batch 维度是否符合部署</li>
+<li>图像预处理是否在模型外还是模型内</li>
+</ul>
+<p>一个导出流程通常是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">load PyTorch model</span><br><span class="line">set eval mode</span><br><span class="line">prepare dummy input</span><br><span class="line">export ONNX</span><br><span class="line">run ONNX checker</span><br><span class="line">compare PyTorch output and ONNX output</span><br><span class="line">benchmark latency</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、ONNX、TensorRT、ONNX-Runtime-怎么分工"><a href="#三、ONNX、TensorRT、ONNX-Runtime-怎么分工" class="headerlink" title="三、ONNX、TensorRT、ONNX Runtime 怎么分工"></a>三、ONNX、TensorRT、ONNX Runtime 怎么分工</h2><p><img src="/images/robotics-deployment/model-deployment-pipeline.png" alt="机器人模型部署流水线"></p>
+<p>可以这样理解三者关系。</p>
+<p>ONNX：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">model exchange format</span><br></pre></td></tr></table></figure>
+
+<p>ONNX Runtime：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">general inference runtime</span><br><span class="line">supports CPU, CUDA, TensorRT EP and more</span><br></pre></td></tr></table></figure>
+
+<p>TensorRT：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">NVIDIA GPU optimized inference engine</span><br></pre></td></tr></table></figure>
+
+<p>如果你的机器人边缘设备是 NVIDIA Jetson 或 x86 + NVIDIA GPU，TensorRT 很常见。</p>
+<p>如果你希望一套代码在 CPU、CUDA、TensorRT、OpenVINO 等后端之间切换，ONNX Runtime 会更方便。</p>
+<p>OpenVINO 则常见于 Intel CPU、iGPU、NPU 生态。</p>
+<p>截至 2026 年 5 月，NVIDIA TensorRT 10.x、ONNX Runtime、OpenVINO 仍是机器人边缘推理里非常常见的三条线。NVIDIA 也已经公开 Jetson Thor 开发者套件信息，把大模型和机器人边缘部署推到更高算力区间。</p>
+<p>但对个人项目来说，不要一开始追最高端硬件。</p>
+<p>先把这三个指标测清楚：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mean_latency_ms</span><br><span class="line">p95_latency_ms</span><br><span class="line">max_latency_ms</span><br></pre></td></tr></table></figure>
+
+<p>比“我用了 TensorRT”更重要。</p>
+<hr>
+<h2 id="四、导出前先固定输入输出契约"><a href="#四、导出前先固定输入输出契约" class="headerlink" title="四、导出前先固定输入输出契约"></a>四、导出前先固定输入输出契约</h2><p>机器人模型部署最怕输入输出不稳定。</p>
+<p>训练脚本里你可能很随意：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">obs = &#123;</span><br><span class="line">  image,</span><br><span class="line">  state,</span><br><span class="line">  instruction</span><br><span class="line">&#125;</span><br><span class="line">action = policy(obs)</span><br></pre></td></tr></table></figure>
+
+<p>部署时必须明确：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">input_image:</span><br><span class="line">  shape: 1 x 3 x 224 x 224</span><br><span class="line">  dtype: float32</span><br><span class="line">  range: 0 to 1</span><br><span class="line">  layout: NCHW</span><br><span class="line"></span><br><span class="line">input_state:</span><br><span class="line">  shape: 1 x 14</span><br><span class="line">  dtype: float32</span><br><span class="line"></span><br><span class="line">output_action:</span><br><span class="line">  shape: 1 x 8</span><br><span class="line">  dtype: float32</span><br></pre></td></tr></table></figure>
+
+<p>还要说明：</p>
+<ul>
+<li>图像是否 RGB</li>
+<li>是否中心裁剪</li>
+<li>是否归一化均值方差</li>
+<li>状态向量顺序</li>
+<li>action 是否已经反归一化</li>
+<li>gripper 命令如何解释</li>
+</ul>
+<p>这就是部署契约。</p>
+<p>如果没有契约，模型版本一换，机器人动作可能直接错位。</p>
+<hr>
+<h2 id="五、数值一致性：先证明导出没坏"><a href="#五、数值一致性：先证明导出没坏" class="headerlink" title="五、数值一致性：先证明导出没坏"></a>五、数值一致性：先证明导出没坏</h2><p>模型导出后，第一件事不是上机器人，而是做数值对齐。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">same input</span><br><span class="line">  -&gt; PyTorch output</span><br><span class="line">  -&gt; ONNX output</span><br><span class="line">  -&gt; TensorRT output</span><br><span class="line">  -&gt; compare difference</span><br></pre></td></tr></table></figure>
+
+<p>可以记录：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">max_abs_error</span><br><span class="line">mean_abs_error</span><br><span class="line">relative_error</span><br></pre></td></tr></table></figure>
+
+<p>如果误差很大，先别部署。</p>
+<p>常见原因：</p>
+<ul>
+<li>算子替换不一致</li>
+<li>动态 shape 错误</li>
+<li>FP16 精度问题</li>
+<li>INT8 量化校准不足</li>
+<li>预处理不一致</li>
+<li>batch 维度错位</li>
+</ul>
+<p>机器人策略对数值误差的容忍度取决于任务。</p>
+<p>分类模型错一点可能没事，但动作策略错一点可能导致夹爪偏离、碰撞或抖动。</p>
+<hr>
+<h2 id="六、延迟预算：推理不能挤爆控制环"><a href="#六、延迟预算：推理不能挤爆控制环" class="headerlink" title="六、延迟预算：推理不能挤爆控制环"></a>六、延迟预算：推理不能挤爆控制环</h2><p>部署时要把整条链路算出来。</p>
+<p>例如一个视觉操作策略：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">camera capture: 25 ms</span><br><span class="line">image resize: 5 ms</span><br><span class="line">state sync: 2 ms</span><br><span class="line">inference: 18 ms</span><br><span class="line">postprocess: 1 ms</span><br><span class="line">safety check: 1 ms</span><br><span class="line">controller write: 2 ms</span><br></pre></td></tr></table></figure>
+
+<p>总延迟：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">total_latency = 54 ms</span><br></pre></td></tr></table></figure>
+
+<p>如果你的控制目标是 20 Hz，这还能接受。</p>
+<p>如果你想做 200 Hz 闭环，这就不行。</p>
+<p>机器人系统常常需要分层：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">high-level policy: 10 to 50 Hz</span><br><span class="line">low-level controller: 200 to 1000 Hz</span><br><span class="line">motor current loop: much faster</span><br></pre></td></tr></table></figure>
+
+<p>不要让 VLA 或大视觉模型直接阻塞 1 kHz 电机控制环。</p>
+<p>更常见的设计是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">policy outputs action chunk or subgoal</span><br><span class="line">local controller executes fast and safely</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、安全包络：把策略关在笼子里"><a href="#七、安全包络：把策略关在笼子里" class="headerlink" title="七、安全包络：把策略关在笼子里"></a>七、安全包络：把策略关在笼子里</h2><p>学习策略不能直接拥有无限控制权。</p>
+<p>安全包络的作用是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">policy proposes action</span><br><span class="line">safety envelope checks action</span><br><span class="line">controller executes only safe command</span><br></pre></td></tr></table></figure>
+
+<p>安全包络至少包括：</p>
+<ul>
+<li>workspace 限制</li>
+<li>关节位置限制</li>
+<li>速度限制</li>
+<li>加速度限制</li>
+<li>力矩或电流限制</li>
+<li>碰撞区域限制</li>
+<li>自碰撞限制</li>
+<li>温度限制</li>
+<li>通信超时限制</li>
+<li>急停状态检查</li>
+</ul>
+<p>可以写成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">if action outside workspace:</span><br><span class="line">  reject action</span><br><span class="line"></span><br><span class="line">if velocity too high:</span><br><span class="line">  scale action</span><br><span class="line"></span><br><span class="line">if torque above limit:</span><br><span class="line">  stop or downgrade</span><br><span class="line"></span><br><span class="line">if sensor timeout:</span><br><span class="line">  enter safe state</span><br></pre></td></tr></table></figure>
+
+<p>安全包络不是为了让系统“看起来正规”，而是为了让模型失败时系统仍然可控。</p>
+<hr>
+<h2 id="八、影子模式：先观察，不接管"><a href="#八、影子模式：先观察，不接管" class="headerlink" title="八、影子模式：先观察，不接管"></a>八、影子模式：先观察，不接管</h2><p><img src="/images/robotics-deployment/safety-shadow-mode.png" alt="安全包络与影子模式"></p>
+<p>影子模式是上线学习策略非常有用的方法。</p>
+<p>它的意思是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">old controller controls robot</span><br><span class="line">new policy runs in parallel</span><br><span class="line">new policy only predicts action</span><br><span class="line">new policy action is logged but not executed</span><br></pre></td></tr></table></figure>
+
+<p>这样你可以在不冒险的情况下评估新模型。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">human teleoperation action</span><br><span class="line">policy predicted action</span><br><span class="line">compare action difference</span><br><span class="line">log disagreement</span><br></pre></td></tr></table></figure>
+
+<p>或者：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">old stable policy action</span><br><span class="line">new policy action</span><br><span class="line">compare safety violations</span><br><span class="line">compare task progress</span><br></pre></td></tr></table></figure>
+
+<p>影子模式适合回答：</p>
+<ul>
+<li>新模型是否经常越界</li>
+<li>新模型和人工动作差异在哪里</li>
+<li>哪些场景风险最高</li>
+<li>是否值得进入小范围主动控制</li>
+</ul>
+<p>这比直接把新策略上线安全得多。</p>
+<hr>
+<h2 id="九、灰度发布和回退路径"><a href="#九、灰度发布和回退路径" class="headerlink" title="九、灰度发布和回退路径"></a>九、灰度发布和回退路径</h2><p>机器人上线不能只准备成功路径。</p>
+<p>至少要准备：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">new model</span><br><span class="line">  -&gt; shadow mode</span><br><span class="line">  -&gt; limited active mode</span><br><span class="line">  -&gt; monitored rollout</span><br><span class="line">  -&gt; full rollout</span><br></pre></td></tr></table></figure>
+
+<p>每一步都要有回退：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">if violation count too high:</span><br><span class="line">  rollback to old model</span><br><span class="line"></span><br><span class="line">if latency above threshold:</span><br><span class="line">  disable new policy</span><br><span class="line"></span><br><span class="line">if sensor mismatch:</span><br><span class="line">  enter safe controller</span><br></pre></td></tr></table></figure>
+
+<p>可以给模型版本建立表：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">model_id</span><br><span class="line">training_data_version</span><br><span class="line">export_version</span><br><span class="line">runtime_backend</span><br><span class="line">calibration_data</span><br><span class="line">latency_profile</span><br><span class="line">known_failure_modes</span><br><span class="line">rollback_target</span><br></pre></td></tr></table></figure>
+
+<p>没有版本记录，线上问题很难复盘。</p>
+<hr>
+<h2 id="十、日志回流：没有日志就没有迭代"><a href="#十、日志回流：没有日志就没有迭代" class="headerlink" title="十、日志回流：没有日志就没有迭代"></a>十、日志回流：没有日志就没有迭代</h2><p>真实机器人部署后，日志比训练 loss 更重要。</p>
+<p>至少记录：</p>
+<ul>
+<li>model version</li>
+<li>runtime backend</li>
+<li>input timestamp</li>
+<li>output action</li>
+<li>action after safety clamp</li>
+<li>robot state</li>
+<li>controller state</li>
+<li>latency</li>
+<li>safety violation</li>
+<li>e-stop event</li>
+<li>success or failure label</li>
+</ul>
+<p>一个最小日志结构可以写成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">episode_id</span><br><span class="line">model_id</span><br><span class="line">timestamp</span><br><span class="line">observation_hash</span><br><span class="line">raw_action</span><br><span class="line">safe_action</span><br><span class="line">robot_state</span><br><span class="line">latency_ms</span><br><span class="line">safety_event</span><br><span class="line">result_label</span><br></pre></td></tr></table></figure>
+
+<p>日志要能回放。</p>
+<p>回放的价值是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">failure</span><br><span class="line">  -&gt; replay observation and action</span><br><span class="line">  -&gt; identify cause</span><br><span class="line">  -&gt; relabel data</span><br><span class="line">  -&gt; retrain or change safety rule</span><br><span class="line">  -&gt; shadow mode regression</span><br></pre></td></tr></table></figure>
+
+<p>这才是部署闭环。</p>
+<hr>
+<h2 id="十一、边缘设备选型不要只看-TOPS"><a href="#十一、边缘设备选型不要只看-TOPS" class="headerlink" title="十一、边缘设备选型不要只看 TOPS"></a>十一、边缘设备选型不要只看 TOPS</h2><p>边缘设备选型常见误区是只看算力。</p>
+<p>但机器人上还要看：</p>
+<ul>
+<li>功耗</li>
+<li>散热</li>
+<li>启动时间</li>
+<li>接口数量</li>
+<li>相机带宽</li>
+<li>网络延迟</li>
+<li>实时线程隔离</li>
+<li>驱动支持</li>
+<li>TensorRT &#x2F; CUDA &#x2F; OpenVINO 支持</li>
+<li>供电稳定性</li>
+</ul>
+<p>Jetson、x86 + NVIDIA GPU、Intel 平台、国产边缘板卡都可能出现在项目里。</p>
+<p>选型时应该从任务反推：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">input resolution</span><br><span class="line">policy frequency</span><br><span class="line">model size</span><br><span class="line">latency budget</span><br><span class="line">power budget</span><br><span class="line">sensor count</span><br><span class="line">robot safety requirement</span><br></pre></td></tr></table></figure>
+
+<p>如果任务只是 10 Hz 视觉抓取，不一定需要最高端设备。</p>
+<p>如果是高频多相机 VLA 或人形全身感知，边缘算力和散热就会成为主线问题。</p>
+<hr>
+<h2 id="十二、部署项目的最小实践路线"><a href="#十二、部署项目的最小实践路线" class="headerlink" title="十二、部署项目的最小实践路线"></a>十二、部署项目的最小实践路线</h2><p>建议按四个阶段做。</p>
+<h3 id="12-1-阶段一：离线导出"><a href="#12-1-阶段一：离线导出" class="headerlink" title="12.1 阶段一：离线导出"></a>12.1 阶段一：离线导出</h3><p>目标：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">PyTorch policy</span><br><span class="line">  -&gt; ONNX</span><br><span class="line">  -&gt; numerical comparison</span><br></pre></td></tr></table></figure>
+
+<p>产物：</p>
+<ul>
+<li>export script</li>
+<li>dummy input spec</li>
+<li>ONNX checker result</li>
+<li>PyTorch vs ONNX error report</li>
+</ul>
+<h3 id="12-2-阶段二：运行时加速"><a href="#12-2-阶段二：运行时加速" class="headerlink" title="12.2 阶段二：运行时加速"></a>12.2 阶段二：运行时加速</h3><p>目标：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ONNX Runtime or TensorRT</span><br><span class="line">  -&gt; latency benchmark</span><br><span class="line">  -&gt; memory profile</span><br></pre></td></tr></table></figure>
+
+<p>产物：</p>
+<ul>
+<li>latency table</li>
+<li>p95 latency</li>
+<li>max latency</li>
+<li>FP32 &#x2F; FP16 对比</li>
+<li>batch size 选择说明</li>
+</ul>
+<h3 id="12-3-阶段三：ROS-2-推理节点"><a href="#12-3-阶段三：ROS-2-推理节点" class="headerlink" title="12.3 阶段三：ROS 2 推理节点"></a>12.3 阶段三：ROS 2 推理节点</h3><p>目标：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">subscribe observation</span><br><span class="line">run inference</span><br><span class="line">publish action</span><br><span class="line">record logs</span><br></pre></td></tr></table></figure>
+
+<p>产物：</p>
+<ul>
+<li>ROS 2 node</li>
+<li>launch file</li>
+<li>config file</li>
+<li>rosbag2 sample</li>
+<li>PlotJuggler &#x2F; Foxglove 截图</li>
+</ul>
+<h3 id="12-4-阶段四：影子模式和安全包络"><a href="#12-4-阶段四：影子模式和安全包络" class="headerlink" title="12.4 阶段四：影子模式和安全包络"></a>12.4 阶段四：影子模式和安全包络</h3><p>目标：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">policy predicts in parallel</span><br><span class="line">safety envelope checks output</span><br><span class="line">active controller remains safe</span><br></pre></td></tr></table></figure>
+
+<p>产物：</p>
+<ul>
+<li>safety rule list</li>
+<li>violation logs</li>
+<li>shadow mode report</li>
+<li>rollback procedure</li>
+<li>failure replay</li>
+</ul>
+<hr>
+<h2 id="十三、常见上线事故"><a href="#十三、常见上线事故" class="headerlink" title="十三、常见上线事故"></a>十三、常见上线事故</h2><h3 id="13-1-训练预处理和部署预处理不一致"><a href="#13-1-训练预处理和部署预处理不一致" class="headerlink" title="13.1 训练预处理和部署预处理不一致"></a>13.1 训练预处理和部署预处理不一致</h3><p>训练时：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">RGB image</span><br><span class="line">center crop</span><br><span class="line">normalize to 0 to 1</span><br></pre></td></tr></table></figure>
+
+<p>部署时：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">BGR image</span><br><span class="line">no crop</span><br><span class="line">normalize to 0 to 255</span><br></pre></td></tr></table></figure>
+
+<p>模型当然会崩。</p>
+<h3 id="13-2-action-反归一化错了"><a href="#13-2-action-反归一化错了" class="headerlink" title="13.2 action 反归一化错了"></a>13.2 action 反归一化错了</h3><p>训练输出是归一化 action。</p>
+<p>部署忘了反归一化，或者 scale 顺序错了，机器人动作会异常小或异常大。</p>
+<h3 id="13-3-推理阻塞控制线程"><a href="#13-3-推理阻塞控制线程" class="headerlink" title="13.3 推理阻塞控制线程"></a>13.3 推理阻塞控制线程</h3><p>不要把大模型推理塞进硬实时控制环。</p>
+<p>应该分线程、分进程或分层：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">policy thread</span><br><span class="line">controller thread</span><br><span class="line">safety monitor</span><br></pre></td></tr></table></figure>
+
+<h3 id="13-4-没有-watchdog"><a href="#13-4-没有-watchdog" class="headerlink" title="13.4 没有 watchdog"></a>13.4 没有 watchdog</h3><p>如果推理节点卡住，控制器必须知道。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">if no action update for timeout:</span><br><span class="line">  hold position or enter safe state</span><br></pre></td></tr></table></figure>
+
+<h3 id="13-5-没有回退模型"><a href="#13-5-没有回退模型" class="headerlink" title="13.5 没有回退模型"></a>13.5 没有回退模型</h3><p>上线新模型之前，要明确旧模型或旧控制器怎么恢复。</p>
+<hr>
+<h2 id="十四、如何写进履历"><a href="#十四、如何写进履历" class="headerlink" title="十四、如何写进履历"></a>十四、如何写进履历</h2><p>不要这样写：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">熟悉 ONNX 和 TensorRT，做过机器人部署。</span><br></pre></td></tr></table></figure>
+
+<p>这句话太泛。</p>
+<p>可以写成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">将 PyTorch 机器人操作策略导出为 ONNX，并使用 ONNX Runtime / TensorRT 在边缘设备部署；</span><br><span class="line">完成 PyTorch、ONNX、TensorRT 三端数值对齐，统计 mean / p95 / max 推理延迟，并将推理结果接入 ROS 2 控制节点。</span><br></pre></td></tr></table></figure>
+
+<p>如果做了安全包络：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">为学习策略实现安全包络，覆盖 workspace、速度、力矩、电流、通信超时和急停状态检查；</span><br><span class="line">记录 raw action、safe action、safety violation 和 robot state，支持失败 replay 与回退。</span><br></pre></td></tr></table></figure>
+
+<p>如果做了影子模式：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">搭建机器人策略影子模式上线流程，新策略在线预测但不接管控制；</span><br><span class="line">对比人工 / 旧策略动作差异，统计安全违规率和高风险场景，为灰度发布提供依据。</span><br></pre></td></tr></table></figure>
+
+<p>最有价值的履历表达是完整链路：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">training -&gt; export -&gt; optimize -&gt; ROS 2 inference -&gt; safety -&gt; shadow mode -&gt; logs -&gt; rollback</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="十五、截至-2026-年-5-月的前沿观察"><a href="#十五、截至-2026-年-5-月的前沿观察" class="headerlink" title="十五、截至 2026 年 5 月的前沿观察"></a>十五、截至 2026 年 5 月的前沿观察</h2><p>第一，部署栈正在更重视端侧大模型。</p>
+<p>Jetson Thor、TensorRT 10.x、TensorRT-LLM、ONNX Runtime 和 OpenVINO 的持续更新，说明机器人端侧推理正在从小模型走向多模态和 VLA。</p>
+<p>第二，ONNX 仍然是个人项目最实用的中间层。</p>
+<p>即使最终用 TensorRT 或 OpenVINO，加一个 ONNX 导出和数值对齐步骤，能显著降低部署调试难度。</p>
+<p>第三，机器人部署会越来越强调安全和可观测性。</p>
+<p>只看成功视频不够。未来更重要的是：</p>
+<ul>
+<li>latency profile</li>
+<li>safety violation</li>
+<li>replay log</li>
+<li>rollback</li>
+<li>shadow mode evaluation</li>
+</ul>
+<p>第四，模型越强，安全包络越重要。</p>
+<p>VLA、Diffusion Policy、强化学习策略都可能在分布外状态下输出危险动作。把策略关在安全边界里，是机器人部署的基本功。</p>
+<hr>
+<h2 id="十六、这篇的核心结论"><a href="#十六、这篇的核心结论" class="headerlink" title="十六、这篇的核心结论"></a>十六、这篇的核心结论</h2><p>机器人部署不是导出一个模型文件。</p>
+<p>它是一条工程闭环：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">checkpoint</span><br><span class="line">  -&gt; ONNX</span><br><span class="line">  -&gt; runtime optimization</span><br><span class="line">  -&gt; inference node</span><br><span class="line">  -&gt; safety envelope</span><br><span class="line">  -&gt; shadow mode</span><br><span class="line">  -&gt; monitored rollout</span><br><span class="line">  -&gt; logs and replay</span><br><span class="line">  -&gt; retrain or rollback</span><br></pre></td></tr></table></figure>
+
+<p>这篇最重要的结论有六个：</p>
+<ol>
+<li>PyTorch checkpoint 只是训练产物，不等于部署产物。</li>
+<li>ONNX 的价值是中间表示，但必须做算子检查和数值对齐。</li>
+<li>TensorRT、ONNX Runtime、OpenVINO 的选择要围绕设备、延迟和维护成本。</li>
+<li>机器人推理要纳入控制频率和延迟预算，不能挤爆实时控制环。</li>
+<li>安全包络和影子模式是学习策略上线前的必要缓冲层。</li>
+<li>能写进履历的部署项目必须有导出、加速、延迟、ROS 2 接入、安全、日志和回退。</li>
+</ol>
+<p>如果你想做一个最小但有含金量的部署作品集，可以从这个目标开始：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">export one robot policy to ONNX</span><br><span class="line">  -&gt; benchmark ONNX Runtime and TensorRT</span><br><span class="line">  -&gt; wrap it as a ROS 2 inference node</span><br><span class="line">  -&gt; add safety envelope</span><br><span class="line">  -&gt; run shadow mode replay</span><br><span class="line">  -&gt; write latency and failure report</span><br></pre></td></tr></table></figure>
+
+<p>做到这里，你就已经跨过了“只会训练模型”的门槛，开始接近机器人系统交付。</p>
+<hr>
+<h2 id="参考项目与资料"><a href="#参考项目与资料" class="headerlink" title="参考项目与资料"></a>参考项目与资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/microsoft/onnxruntime">ONNX Runtime</a></li>
+<li><a target="_blank" rel="noopener" href="https://onnxruntime.ai/docs/">ONNX Runtime Docs</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/NVIDIA/TensorRT">TensorRT</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.nvidia.com/deeplearning/tensorrt/">TensorRT Docs</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/openvinotoolkit/openvino">OpenVINO</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.openvino.ai/">OpenVINO Docs</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.nvidia.com/embedded-computing">NVIDIA Jetson</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/ros-controls/ros2_control">ros2_control</a></li>
+<li><a target="_blank" rel="noopener" href="https://foxglove.dev/">Foxglove</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/facontidavide/PlotJuggler">PlotJuggler</a></li>
+</ul>
+<hr>
+<h2 id="系列导航"><a href="#系列导航" class="headerlink" title="系列导航"></a>系列导航</h2><p>本篇在系列中的位置：</p>
+<p><code>总路线图 -&gt; 数学基础 -&gt; 坐标系 -&gt; 运动学 -&gt; 概率滤波 -&gt; 感知与三维理解 -&gt; 机械臂控制 -&gt; 接触抓取 -&gt; 四足控制 -&gt; 人形控制基础 -&gt; 人形全身控制 -&gt; QP 实现 -&gt; 接触力分配 -&gt; 状态估计 -&gt; 仿真实战 -&gt; ROS 2 工程 -&gt; 机器人强化学习 -&gt; 机器人模仿学习 -&gt; VLA 大模型 -&gt; 机器人硬件 -&gt; 机器人部署</code></p>
+<ul>
+<li>上一篇：<a href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT%E4%B8%8Eros2_control/" title="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control">机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control</a></li>
+<li>回到总路线：<a href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</a></li>
+</ul>
+<link rel="stylesheet" href="/css/spoiler.css" type="text/css"><script src="/js/spoiler.js" type="text/javascript" async></script></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://LJS515.github.io/">YiQiu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://ljs515.github.io/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%83%A8%E7%BD%B2%E4%B8%8E%E4%B8%8A%E7%BA%BF%EF%BC%9AONNX%E3%80%81TensorRT%E3%80%81%E5%AE%89%E5%85%A8%E5%8C%85%E7%BB%9C%E4%B8%8E%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F/">https://ljs515.github.io/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%83%A8%E7%BD%B2%E4%B8%8E%E4%B8%8A%E7%BA%BF%EF%BC%9AONNX%E3%80%81TensorRT%E3%80%81%E5%AE%89%E5%85%A8%E5%8C%85%E7%BB%9C%E4%B8%8E%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://ljs515.github.io" target="_blank">YiQiuのblog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD/">具身智能</a><a class="post-meta__tags" href="/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA/">机器人</a><a class="post-meta__tags" href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/">开源项目</a><a class="post-meta__tags" href="/tags/%E9%83%A8%E7%BD%B2/">部署</a><a class="post-meta__tags" href="/tags/ONNX/">ONNX</a><a class="post-meta__tags" href="/tags/TensorRT/">TensorRT</a><a class="post-meta__tags" href="/tags/ONNX-Runtime/">ONNX Runtime</a><a class="post-meta__tags" href="/tags/%E5%AE%89%E5%85%A8/">安全</a><a class="post-meta__tags" href="/tags/%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F/">影子模式</a></div><div class="post-share"><div class="social-share" data-image="/images/post-covers/deployment.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>感谢您的支持</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechat.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wechat.jpg" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpg" alt="alipay"/></a><div class="post-qr-code-desc">alipay</div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width no-desc" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT%E4%B8%8Eros2_control/" title="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control"><img class="cover" src="/images/post-covers/hardware.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related no-desc" href="/2026/05/23/ROS2%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8Erosbag%E8%B0%83%E8%AF%95/" title="ROS 2 工程指南：节点、TF、控制环与 rosbag 调试"><img class="cover" src="/images/post-covers/ros2.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-23</div><div class="info-item-2">ROS 2 工程指南：节点、TF、控制环与 rosbag 调试</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"><img class="cover" src="/images/post-covers/vla.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/" title="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示"><img class="cover" src="/images/post-covers/perception-3d.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-22</div><div class="info-item-2">具身智能中的感知与三维理解：相机、SLAM 与 3D 表示</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"><img class="cover" src="/images/post-covers/roadmap.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%A8%A1%E4%BB%BF%E5%AD%A6%E4%B9%A0%E5%AE%9E%E6%88%98%EF%BC%9ADiffusion%20Policy%E3%80%81ACT%E4%B8%8ELeRobot/" title="机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot"><img class="cover" src="/images/post-covers/imitation-learning.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">机器人模仿学习实战：Diffusion Policy、ACT 与 LeRobot</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/24/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%E5%85%A5%E9%97%A8%EF%BC%9APPO%E3%80%81legged_gym%E4%B8%8ESim2Real/" title="机器人强化学习入门：PPO、legged_gym 与 Sim2Real"><img class="cover" src="/images/post-covers/reinforcement-learning.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-24</div><div class="info-item-2">机器人强化学习入门：PPO、legged_gym 与 Sim2Real</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="author-info-name">YiQiu</div><div class="author-info-description">专注于嵌入式技术研究 | ROS学习之路 | 深度学习&人工智能 | 算法研究</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">23</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">63</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" href="https://LJS515.github.io/"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/LJS515" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:3435583503@qq.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><style>
+.announcement-card {
+    --main-color: #ff00ff;
+    --secondary-color: #00ffff;
+    --highlight-color: #ff5500;
+    position: relative;
+    overflow: hidden;
+}
+.announcement-content {
+    font-size: 1rem; 
+    line-height: 1.2; 
+    color: #ffffff;
+    position: relative;
+}
+.keyword {
+    color: var(--secondary-color);
+    font-weight: 300;
+    font-size: 1.1rem; 
+}
+.highlight {
+    color: var(--main-color);
+    font-weight: 1000;
+    font-size: 1.2rem; 
+}
+.announcement-content ul {
+    list-style-type: none;
+    margin: 0.8rem 0; 
+    padding-left: 1.5rem;   
+}
+</style>
+<div class="announcement-card">
+    <div class="announcement-content">
+        <p><span class="highlight">欢迎来到「YiQiu」ROS&AI研习录</span>！🎉</p>
+        <p><strong>本平台专注于：</strong></p>
+        <ul>
+            <li><span class="keyword">> 嵌入式系统开发</span></li>
+            <li><span class="keyword">> ROS学习</span></li>
+            <li><span class="keyword">> 算法研究</span></li>
+            <li><span class="keyword">> 深度学习&人工智能</span></li>
+        </ul>
+        <p>🌟 <strong>加入我们，一起探索机器人的奥秘，提升AI实战能力，共同创造更美好的人工智能！</strong></p>
+    </div>
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%83%A8%E7%BD%B2%E4%B8%8E%E4%B8%8A%E7%BA%BF%EF%BC%9AONNX%E3%80%81TensorRT%E3%80%81%E5%AE%89%E5%85%A8%E5%8C%85%E7%BB%9C%E4%B8%8E%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F"><span class="toc-number">1.</span> <span class="toc-text">机器人部署与上线：ONNX、TensorRT、安全包络与影子模式</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E9%83%A8%E7%BD%B2%E4%B8%8D%E6%98%AF%E6%8A%8A-checkpoint-%E6%8B%B7%E5%88%B0%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%8A"><span class="toc-number">1.1.</span> <span class="toc-text">一、部署不是把 checkpoint 拷到机器人上</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E4%BB%8E-PyTorch-%E5%AF%BC%E5%87%BA"><span class="toc-number">1.2.</span> <span class="toc-text">二、为什么要从 PyTorch 导出</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81ONNX%E3%80%81TensorRT%E3%80%81ONNX-Runtime-%E6%80%8E%E4%B9%88%E5%88%86%E5%B7%A5"><span class="toc-number">1.3.</span> <span class="toc-text">三、ONNX、TensorRT、ONNX Runtime 怎么分工</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E5%AF%BC%E5%87%BA%E5%89%8D%E5%85%88%E5%9B%BA%E5%AE%9A%E8%BE%93%E5%85%A5%E8%BE%93%E5%87%BA%E5%A5%91%E7%BA%A6"><span class="toc-number">1.4.</span> <span class="toc-text">四、导出前先固定输入输出契约</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E6%95%B0%E5%80%BC%E4%B8%80%E8%87%B4%E6%80%A7%EF%BC%9A%E5%85%88%E8%AF%81%E6%98%8E%E5%AF%BC%E5%87%BA%E6%B2%A1%E5%9D%8F"><span class="toc-number">1.5.</span> <span class="toc-text">五、数值一致性：先证明导出没坏</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E5%BB%B6%E8%BF%9F%E9%A2%84%E7%AE%97%EF%BC%9A%E6%8E%A8%E7%90%86%E4%B8%8D%E8%83%BD%E6%8C%A4%E7%88%86%E6%8E%A7%E5%88%B6%E7%8E%AF"><span class="toc-number">1.6.</span> <span class="toc-text">六、延迟预算：推理不能挤爆控制环</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E5%AE%89%E5%85%A8%E5%8C%85%E7%BB%9C%EF%BC%9A%E6%8A%8A%E7%AD%96%E7%95%A5%E5%85%B3%E5%9C%A8%E7%AC%BC%E5%AD%90%E9%87%8C"><span class="toc-number">1.7.</span> <span class="toc-text">七、安全包络：把策略关在笼子里</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F%EF%BC%9A%E5%85%88%E8%A7%82%E5%AF%9F%EF%BC%8C%E4%B8%8D%E6%8E%A5%E7%AE%A1"><span class="toc-number">1.8.</span> <span class="toc-text">八、影子模式：先观察，不接管</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E7%81%B0%E5%BA%A6%E5%8F%91%E5%B8%83%E5%92%8C%E5%9B%9E%E9%80%80%E8%B7%AF%E5%BE%84"><span class="toc-number">1.9.</span> <span class="toc-text">九、灰度发布和回退路径</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E6%97%A5%E5%BF%97%E5%9B%9E%E6%B5%81%EF%BC%9A%E6%B2%A1%E6%9C%89%E6%97%A5%E5%BF%97%E5%B0%B1%E6%B2%A1%E6%9C%89%E8%BF%AD%E4%BB%A3"><span class="toc-number">1.10.</span> <span class="toc-text">十、日志回流：没有日志就没有迭代</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E8%BE%B9%E7%BC%98%E8%AE%BE%E5%A4%87%E9%80%89%E5%9E%8B%E4%B8%8D%E8%A6%81%E5%8F%AA%E7%9C%8B-TOPS"><span class="toc-number">1.11.</span> <span class="toc-text">十一、边缘设备选型不要只看 TOPS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81%E9%83%A8%E7%BD%B2%E9%A1%B9%E7%9B%AE%E7%9A%84%E6%9C%80%E5%B0%8F%E5%AE%9E%E8%B7%B5%E8%B7%AF%E7%BA%BF"><span class="toc-number">1.12.</span> <span class="toc-text">十二、部署项目的最小实践路线</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#12-1-%E9%98%B6%E6%AE%B5%E4%B8%80%EF%BC%9A%E7%A6%BB%E7%BA%BF%E5%AF%BC%E5%87%BA"><span class="toc-number">1.12.1.</span> <span class="toc-text">12.1 阶段一：离线导出</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-2-%E9%98%B6%E6%AE%B5%E4%BA%8C%EF%BC%9A%E8%BF%90%E8%A1%8C%E6%97%B6%E5%8A%A0%E9%80%9F"><span class="toc-number">1.12.2.</span> <span class="toc-text">12.2 阶段二：运行时加速</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-3-%E9%98%B6%E6%AE%B5%E4%B8%89%EF%BC%9AROS-2-%E6%8E%A8%E7%90%86%E8%8A%82%E7%82%B9"><span class="toc-number">1.12.3.</span> <span class="toc-text">12.3 阶段三：ROS 2 推理节点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-4-%E9%98%B6%E6%AE%B5%E5%9B%9B%EF%BC%9A%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F%E5%92%8C%E5%AE%89%E5%85%A8%E5%8C%85%E7%BB%9C"><span class="toc-number">1.12.4.</span> <span class="toc-text">12.4 阶段四：影子模式和安全包络</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%89%E3%80%81%E5%B8%B8%E8%A7%81%E4%B8%8A%E7%BA%BF%E4%BA%8B%E6%95%85"><span class="toc-number">1.13.</span> <span class="toc-text">十三、常见上线事故</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#13-1-%E8%AE%AD%E7%BB%83%E9%A2%84%E5%A4%84%E7%90%86%E5%92%8C%E9%83%A8%E7%BD%B2%E9%A2%84%E5%A4%84%E7%90%86%E4%B8%8D%E4%B8%80%E8%87%B4"><span class="toc-number">1.13.1.</span> <span class="toc-text">13.1 训练预处理和部署预处理不一致</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#13-2-action-%E5%8F%8D%E5%BD%92%E4%B8%80%E5%8C%96%E9%94%99%E4%BA%86"><span class="toc-number">1.13.2.</span> <span class="toc-text">13.2 action 反归一化错了</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#13-3-%E6%8E%A8%E7%90%86%E9%98%BB%E5%A1%9E%E6%8E%A7%E5%88%B6%E7%BA%BF%E7%A8%8B"><span class="toc-number">1.13.3.</span> <span class="toc-text">13.3 推理阻塞控制线程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#13-4-%E6%B2%A1%E6%9C%89-watchdog"><span class="toc-number">1.13.4.</span> <span class="toc-text">13.4 没有 watchdog</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#13-5-%E6%B2%A1%E6%9C%89%E5%9B%9E%E9%80%80%E6%A8%A1%E5%9E%8B"><span class="toc-number">1.13.5.</span> <span class="toc-text">13.5 没有回退模型</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E5%9B%9B%E3%80%81%E5%A6%82%E4%BD%95%E5%86%99%E8%BF%9B%E5%B1%A5%E5%8E%86"><span class="toc-number">1.14.</span> <span class="toc-text">十四、如何写进履历</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%94%E3%80%81%E6%88%AA%E8%87%B3-2026-%E5%B9%B4-5-%E6%9C%88%E7%9A%84%E5%89%8D%E6%B2%BF%E8%A7%82%E5%AF%9F"><span class="toc-number">1.15.</span> <span class="toc-text">十五、截至 2026 年 5 月的前沿观察</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E5%85%AD%E3%80%81%E8%BF%99%E7%AF%87%E7%9A%84%E6%A0%B8%E5%BF%83%E7%BB%93%E8%AE%BA"><span class="toc-number">1.16.</span> <span class="toc-text">十六、这篇的核心结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83%E9%A1%B9%E7%9B%AE%E4%B8%8E%E8%B5%84%E6%96%99"><span class="toc-number">1.17.</span> <span class="toc-text">参考项目与资料</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%B3%BB%E5%88%97%E5%AF%BC%E8%88%AA"><span class="toc-number">1.18.</span> <span class="toc-text">系列导航</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%83%A8%E7%BD%B2%E4%B8%8E%E4%B8%8A%E7%BA%BF%EF%BC%9AONNX%E3%80%81TensorRT%E3%80%81%E5%AE%89%E5%85%A8%E5%8C%85%E7%BB%9C%E4%B8%8E%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F/" title="机器人部署与上线：ONNX、TensorRT、安全包络与影子模式"><img src="/images/post-covers/deployment.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人部署与上线：ONNX、TensorRT、安全包络与影子模式"/></a><div class="content"><a class="title" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%83%A8%E7%BD%B2%E4%B8%8E%E4%B8%8A%E7%BA%BF%EF%BC%9AONNX%E3%80%81TensorRT%E3%80%81%E5%AE%89%E5%85%A8%E5%8C%85%E7%BB%9C%E4%B8%8E%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F/" title="机器人部署与上线：ONNX、TensorRT、安全包络与影子模式">机器人部署与上线：ONNX、TensorRT、安全包络与影子模式</a><time datetime="2026-05-25T09:45:00.000Z" title="发表于 2026-05-25 17:45:00">2026-05-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT%E4%B8%8Eros2_control/" title="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control"><img src="/images/post-covers/hardware.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control"/></a><div class="content"><a class="title" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%A1%AC%E4%BB%B6%E5%85%A5%E9%97%A8%EF%BC%9ABLDC%E3%80%81ODrive%E3%80%81EtherCAT%E4%B8%8Eros2_control/" title="机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control">机器人硬件入门：BLDC、ODrive、EtherCAT 与 ros2_control</a><time datetime="2026-05-25T08:45:00.000Z" title="发表于 2026-05-25 16:45:00">2026-05-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"><img src="/images/post-covers/vla.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"/></a><div class="content"><a class="title" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</a><time datetime="2026-05-25T04:05:00.000Z" title="发表于 2026-05-25 12:05:00">2026-05-25</time></div></div></div></div></div></div></main><footer id="footer" style="background-color: rgba(45, 10, 61, 0.2);"><div class="footer-other"><div class="footer-copyright"></div><div class="footer_custom_text"><style>
+  .footer {
+    text-align: center;
+    position: relative;
+  }
+  .social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .social-links i {
+    color: #8400ff;
+  }
+  .social-link {
+    color: #8a2be2;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: rgba(138, 43, 226, 0.1);
+  }
+  .social-link:hover {
+    color: #ffffff;
+    background: #892be2;
+    transform: translateY(-3px) scale(1.08);
+    box-shadow: 0 5px 15px rgba(138, 43, 226, 0.4);
+    text-decoration: none !important;
+  }
+  .footer p {
+    margin: 0.5rem 0;
+    line-height: 1.4;
+  }
+  .copyright {
+    font-size: 1.1rem;
+    color: #c08bdf;
+    font-weight: 400;
+  }
+  .tagline {
+    font-size: 0.8rem;
+    color: #8a2be2;
+    font-style: italic;
+    font-weight: 500;
+  }
+  .footer-note {
+    font-size: 0.78rem;
+    color: rgba(219, 142, 255, 0.8);
+  }
+</style>
+<div class="footer">
+  <div class="social-links">
+    <a href="https://github.com/LJS515" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+    <a href="https://blog.csdn.net/2401_84593538" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="CSDN" title="CSDN">
+      <i class="fas fa-code"></i>
+    </a>
+    <a href="https://www.xiaohongshu.com/user/profile/5e8a0aae0000000001002ce4" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="小红书" title="小红书">
+      <i class="fas fa-book"></i>
+    </a>
+    <a href="https://space.bilibili.com/1158177941" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="bilibili" title="bilibili">
+      <i class="fab fa-bilibili"></i>
+    </a>
+  </div>
+  <p class="copyright">© 2025 YiQiuのblog</p>
+  <p class="tagline">&gt; Stay curious, stay hacking, stay anime! &lt;</p>
+  <p class="footer-note">静态站点不再展示伪造访问量。后续如需真实统计，建议接入 Umami、Google Analytics 或 Cloudflare Web Analytics。</p>
+</div>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.2"></script><script src="/js/main.js?v=5.5.2"></script><div class="js-pjax"></div><script defer src="/js/cursor.js"></script><script src="/js/sakura.js"></script><meting-js class="no-destroy" id="8932390" server="netease" type="playlist" fixed="true" autoplay="true" order="random" volume="0.3" list-folded="false" list-max-height="36vh"> </meting-js><link rel="stylesheet" href="https://npm.elemecdn.com/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'"><script src="https://npm.elemecdn.com/aplayer/dist/APlayer.min.js"></script><script src="https://npm.elemecdn.com/meting/dist/Meting.min.js"></script><script>(() => {
+  const destroyAplayer = () => {
+    if (window.aplayers) {
+      for (let i = 0; i < window.aplayers.length; i++) {
+        if (!window.aplayers[i].options.fixed) {
+          window.aplayers[i].destroy()
+        }
+      }
+    }
+  }
+
+  const runMetingJS = () => {
+    typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+  }
+
+  btf.addGlobalFn('pjaxSend', destroyAplayer, 'destroyAplayer')
+  btf.addGlobalFn('pjaxComplete', loadMeting, 'runMetingJS')
+})()</script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      const usePjax = true
+      true
+        ? (usePjax ? pjax.loadUrl('/404.html') : window.location.href = '/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})()</script><script async data-pjax src="/"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词..." type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.2"></script></div></div><!-- hexo injector body_end start --><script data-pjax>
+  function butterfly_swiper_injector_config(){
+    var parent_div_git = document.getElementById('recent-posts');
+    var item_html = '<div class="recent-post-item" style="height: auto;width: 100%"><div class="blog-slider swiper-container-fade swiper-container-horizontal" id="swiper_container"><div class="blog-slider__wrp swiper-wrapper" style="transition-duration: 0ms;"></div><div class="blog-slider__pagination swiper-pagination-clickable swiper-pagination-bullets"></div></div></div>';
+    console.log('已挂载butterfly_swiper')
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+    }
+  var elist = 'undefined'.split(',');
+  var cpage = location.pathname;
+  var epage = '/';
+  var flag = 0;
+
+  for (var i=0;i<elist.length;i++){
+    if (cpage.includes(elist[i])){
+      flag++;
+    }
+  }
+
+  if ((epage ==='all')&&(flag == 0)){
+    butterfly_swiper_injector_config();
+  }
+  else if (epage === cpage){
+    butterfly_swiper_injector_config();
+  }
+  </script><script defer src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.js"></script><script defer data-pjax src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper_init.js"></script><script data-pjax>
+  function butterfly_categories_card_injector_config(){
+    // 检查容器是否存在
+    var parent_div_git = document.getElementById('recent-posts');
+    // 如果容器不存在，则动态创建
+    if (!parent_div_git) {
+      console.warn('butterfly_categories_card: 挂载容器不存在，正在动态创建...');
+      // 创建新容器（默认插入到页面主体顶部）
+      parent_div_git = document.createElement('div');
+      parent_div_git.id = 'recent-posts'; // 赋予配置的ID
+      document.querySelector('#page').prepend(parent_div_git); // 插入到 #content-inner 内
+    }
+    var item_html = '<style>li.categoryBar-list-item{width:32.3%;}.categoryBar-list{max-height: 950px;overflow:auto;}.categoryBar-list::-webkit-scrollbar{width:0!important}@media screen and (max-width: 650px){.categoryBar-list{max-height: 800px;}}</style><div class="recent-post-item" style="height:auto;width:100%;padding:0px;"><div id="categoryBar"><ul class="categoryBar-list"><li class="categoryBar-list-item" style="background:url(/img/11.png);"> <a class="categoryBar-list-link" onclick="pjax.loadUrl(&quot;/categories/具身智能教程/&quot;);" href="javascript:void(0);">具身智能教程</a><span class="categoryBar-list-count">21</span><span class="categoryBar-list-descr">1</span></li></ul></div></div>';
+    console.log('已挂载 butterfly_categories_card');
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+  }
+  // 路径匹配逻辑（使用 startsWith）
+  if (location.pathname.startsWith('/categories/') || '/categories/' === 'all') {
+    butterfly_categories_card_injector_config();
+  }
+  </script><!-- hexo injector body_end end --><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"right","width":200,"height":400},"mobile":{"show":true},"react":{"opacity":0.7},"log":false});</script></body></html>
