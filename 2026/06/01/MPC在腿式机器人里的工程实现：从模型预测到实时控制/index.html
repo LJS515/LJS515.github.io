@@ -1,0 +1,790 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>MPC 在腿式机器人里的工程实现：从模型预测到实时控制 | YiQiuのblog</title><meta name="author" content="YiQiu"><meta name="copyright" content="YiQiu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#f5f0fa"><meta name="description" content="MPC 在腿式机器人里的工程实现：从模型预测到实时控制 前面的四足与人形文章已经建立了几个关键概念：  足端轨迹与落脚点 质心与支撑关系 接触力分配 全身控制与 QP 浮动基状态估计  当机器人只需要慢速站立或执行固定步态时，规则、轨迹生成和局部反馈已经能做出可用原型。 但如果目标变成：  更快的小跑 速度与转向指令跟踪 复杂地形上的连续落脚 推搡后的恢复 接触力、摩擦和硬件限制同时满足  控制器">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MPC 在腿式机器人里的工程实现：从模型预测到实时控制">
+<meta property="og:url" content="https://ljs515.github.io/2026/06/01/MPC%E5%9C%A8%E8%85%BF%E5%BC%8F%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%87%8C%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E6%A8%A1%E5%9E%8B%E9%A2%84%E6%B5%8B%E5%88%B0%E5%AE%9E%E6%97%B6%E6%8E%A7%E5%88%B6/index.html">
+<meta property="og:site_name" content="YiQiuのblog">
+<meta property="og:description" content="MPC 在腿式机器人里的工程实现：从模型预测到实时控制 前面的四足与人形文章已经建立了几个关键概念：  足端轨迹与落脚点 质心与支撑关系 接触力分配 全身控制与 QP 浮动基状态估计  当机器人只需要慢速站立或执行固定步态时，规则、轨迹生成和局部反馈已经能做出可用原型。 但如果目标变成：  更快的小跑 速度与转向指令跟踪 复杂地形上的连续落脚 推搡后的恢复 接触力、摩擦和硬件限制同时满足  控制器">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ljs515.github.io/images/post-covers/legged-mpc.png">
+<meta property="article:published_time" content="2026-06-01T02:30:00.000Z">
+<meta property="article:modified_time" content="2026-06-01T11:16:34.715Z">
+<meta property="article:author" content="YiQiu">
+<meta property="article:tag" content="具身智能">
+<meta property="article:tag" content="机器人">
+<meta property="article:tag" content="MPC">
+<meta property="article:tag" content="腿式机器人">
+<meta property="article:tag" content="四足机器人">
+<meta property="article:tag" content="人形机器人">
+<meta property="article:tag" content="全身控制">
+<meta property="article:tag" content="OCS2">
+<meta property="article:tag" content="开源项目">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ljs515.github.io/images/post-covers/legged-mpc.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "MPC 在腿式机器人里的工程实现：从模型预测到实时控制",
+  "url": "https://ljs515.github.io/2026/06/01/MPC%E5%9C%A8%E8%85%BF%E5%BC%8F%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%87%8C%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E6%A8%A1%E5%9E%8B%E9%A2%84%E6%B5%8B%E5%88%B0%E5%AE%9E%E6%97%B6%E6%8E%A7%E5%88%B6/",
+  "image": "https://ljs515.github.io/images/post-covers/legged-mpc.png",
+  "datePublished": "2026-06-01T02:30:00.000Z",
+  "dateModified": "2026-06-01T11:16:34.715Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YiQiu",
+      "url": "https://LJS515.github.io/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/01.png"><link rel="canonical" href="https://ljs515.github.io/2026/06/01/MPC%E5%9C%A8%E8%85%BF%E5%BC%8F%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%87%8C%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E6%A8%A1%E5%9E%8B%E9%A2%84%E6%B5%8B%E5%88%B0%E5%AE%9E%E6%97%B6%E6%8E%A7%E5%88%B6/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.2"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#2d0a3d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f5f0fa')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chewy&amp;family=Ma+Shan+Zheng&amp;family=Fredoka+One&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":300,"languages":{"author":"作者: YiQiu","link":"链接: ","source":"来源: YiQiuのblog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'MPC 在腿式机器人里的工程实现：从模型预测到实时控制',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Chewy&family=Fredoka+One&family=Caveat:wght@400;700&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet"><!-- hexo injector head_end start --><link rel="stylesheet" href="/css/categorybar.css"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiperstyle.css" media="print" onload="this.media='all'"><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-image: url(/img/03.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">27</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">80</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/images/post-covers/legged-mpc.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/img/01.png" alt="Logo"><span class="site-name">YiQiuのblog</span></a><a class="nav-page-title" href="/"><span class="site-name">MPC 在腿式机器人里的工程实现：从模型预测到实时控制</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">MPC 在腿式机器人里的工程实现：从模型预测到实时控制</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-06-01T02:30:00.000Z" title="发表于 2026-06-01 10:30:00">2026-06-01</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-06-01T11:16:34.715Z" title="更新于 2026-06-01 19:16:34">2026-06-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%95%99%E7%A8%8B/">具身智能教程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">3.8k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>12分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div class="ai-summary"><div class="ai-explanation" style="display: block;" data-summary="这篇文章从机器人工程视角讲清楚 MPC 在四足与人形机器人中的落地方式，覆盖滚动时域优化、质心动力学、预测时域、接触约束、落脚点规划、MPC 与 WBC 的分工、OCS2 开源实践、仿真调试、作品集项目与简历表达。目标不是只会写优化公式，而是建立一条能在实时控制环中运行、能记录失败、能逐层验证的实现路线。">YiQiuAI正在绞尽脑汁想思路ING···</div><div class="ai-title"> <div class="ai-title-left"> <i class="fa-brands fa-slack"></i><div class="ai-title-text">YiQiuのAI摘要</div></div><div class="ai-tag" id="ai-tag">HunYuan-Lite</div></div></div><div id="post-outdate-notice" data="{&quot;limitDay&quot;:365,&quot;messagePrev&quot;:&quot;本文最后更新于&quot;,&quot;messageNext&quot;:&quot;天前，部分内容可能已失效&quot;,&quot;postUpdate&quot;:&quot;2026-06-01 19:16:34&quot;}" hidden></div><h1 id="MPC-在腿式机器人里的工程实现：从模型预测到实时控制"><a href="#MPC-在腿式机器人里的工程实现：从模型预测到实时控制" class="headerlink" title="MPC 在腿式机器人里的工程实现：从模型预测到实时控制"></a>MPC 在腿式机器人里的工程实现：从模型预测到实时控制</h1><p><img src="/images/post-covers/legged-mpc.png" alt="MPC 在腿式机器人里的工程实现封面"></p>
+<p>前面的四足与人形文章已经建立了几个关键概念：</p>
+<ul>
+<li>足端轨迹与落脚点</li>
+<li>质心与支撑关系</li>
+<li>接触力分配</li>
+<li>全身控制与 QP</li>
+<li>浮动基状态估计</li>
+</ul>
+<p>当机器人只需要慢速站立或执行固定步态时，规则、轨迹生成和局部反馈已经能做出可用原型。</p>
+<p>但如果目标变成：</p>
+<ul>
+<li>更快的小跑</li>
+<li>速度与转向指令跟踪</li>
+<li>复杂地形上的连续落脚</li>
+<li>推搡后的恢复</li>
+<li>接触力、摩擦和硬件限制同时满足</li>
+</ul>
+<p>控制器就必须提前考虑未来几个时刻。</p>
+<p>这正是 MPC 的进入点。</p>
+<p>MPC 全称是 Model Predictive Control，也就是模型预测控制。它的核心不是”预测得越远越好”，而是：</p>
+<p><strong>用一个足够快的模型在线预测未来，在约束内选出当前最值得执行的第一步，然后拿到新状态继续重算。</strong></p>
+<hr>
+<h2 id="一、MPC-不是一次性轨迹规划"><a href="#一、MPC-不是一次性轨迹规划" class="headerlink" title="一、MPC 不是一次性轨迹规划"></a>一、MPC 不是一次性轨迹规划</h2><p><img src="/images/robotics-mpc/mpc-receding-horizon.png" alt="腿式机器人 MPC 滚动时域控制流程"></p>
+<p>MPC 最关键的直觉是滚动时域。</p>
+<p>每次求解时，控制器都会做下面几件事：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">current_state</span><br><span class="line">  -&gt; predict future states over a finite horizon</span><br><span class="line">  -&gt; optimize future controls under constraints</span><br><span class="line">  -&gt; execute only the first control</span><br><span class="line">  -&gt; receive new sensor estimate</span><br><span class="line">  -&gt; solve again</span><br></pre></td></tr></table></figure>
+
+<p>如果预测时域内有 <code>N</code> 个离散步，状态和控制可以写成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">x_0, x_1, x_2, ... x_N</span><br><span class="line">u_0, u_1, u_2, ... u_N-1</span><br></pre></td></tr></table></figure>
+
+<p>在线优化通常希望同时减小：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">cost =</span><br><span class="line">  state_tracking_error</span><br><span class="line">  + control_effort</span><br><span class="line">  + force_change_penalty</span><br><span class="line">  + foothold_penalty</span><br><span class="line">  + terminal_error</span><br></pre></td></tr></table></figure>
+
+<p>但实际只执行：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">u_0</span><br></pre></td></tr></table></figure>
+
+<p>下一次控制周期到来时，旧预测不会被盲目执行到底，而是根据新估计状态重新求解。</p>
+<p>这使 MPC 同时具备两种能力：</p>
+<ol>
+<li>比纯反馈控制更早看到未来约束。</li>
+<li>比离线轨迹更能适应扰动和模型误差。</li>
+</ol>
+<hr>
+<h2 id="二、腿式机器人为什么特别需要-MPC"><a href="#二、腿式机器人为什么特别需要-MPC" class="headerlink" title="二、腿式机器人为什么特别需要 MPC"></a>二、腿式机器人为什么特别需要 MPC</h2><p>腿式机器人比轮式机器人多了一层麻烦：</p>
+<p><strong>接触会切换。</strong></p>
+<p>每条腿都可能在支撑相和摆动相之间变化。支撑腿可以给地面施加力，摆动腿不应该凭空产生地面反作用力。</p>
+<p>因此控制器面对的不是一个始终固定的系统，而是一个随时间切换的系统：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">contact_mode_0</span><br><span class="line">  -&gt; contact_mode_1</span><br><span class="line">  -&gt; contact_mode_2</span><br><span class="line">  -&gt; ...</span><br></pre></td></tr></table></figure>
+
+<p>例如四足小跑步态里，对角腿会成对切换。控制器必须提前知道：</p>
+<ul>
+<li>下一时刻哪些腿还在支撑</li>
+<li>哪些腿即将离地</li>
+<li>哪些腿即将落地</li>
+<li>支撑力如何平滑转移</li>
+<li>未来落脚点是否还能支撑期望速度</li>
+</ul>
+<p>MPC 的价值就是把这些未来接触关系纳入计算。</p>
+<hr>
+<h2 id="三、先用什么模型：质心动力学"><a href="#三、先用什么模型：质心动力学" class="headerlink" title="三、先用什么模型：质心动力学"></a>三、先用什么模型：质心动力学</h2><p>实时 MPC 的第一项工程决策不是求解器，而是模型复杂度。</p>
+<p>如果直接把整台四足或人形机器人的所有关节、刚体和接触都塞进在线优化，问题会很重。</p>
+<p>工程上常见做法是先用简化模型做 MPC，再把结果交给下层控制器。</p>
+<p>腿式机器人里非常常见的是质心动力学模型。</p>
+<h3 id="3-1-质心模型保留什么"><a href="#3-1-质心模型保留什么" class="headerlink" title="3.1 质心模型保留什么"></a>3.1 质心模型保留什么</h3><p>质心模型重点保留：</p>
+<ul>
+<li>机身位置</li>
+<li>机身速度</li>
+<li>机身姿态</li>
+<li>机身角速度</li>
+<li>各支撑脚接触力</li>
+<li>接触位置</li>
+</ul>
+<p>一个直观写法是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">com_acceleration =</span><br><span class="line">  sum(contact_forces) / robot_mass</span><br><span class="line">  + gravity</span><br></pre></td></tr></table></figure>
+
+<p>机身角动量变化可以理解为：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">angular_momentum_rate =</span><br><span class="line">  sum(cross(foot_position - com_position, contact_force))</span><br></pre></td></tr></table></figure>
+
+<p>这组模型没有直接处理每个关节的细节，但它能回答一个很重要的问题：</p>
+<p><strong>为了让整体机身按期望运动，各条支撑腿应该提供什么接触力。</strong></p>
+<h3 id="3-2-简化模型的代价"><a href="#3-2-简化模型的代价" class="headerlink" title="3.2 简化模型的代价"></a>3.2 简化模型的代价</h3><p>模型越简单，求解越快，但误差越大。</p>
+<p>常见误差包括：</p>
+<ul>
+<li>忽略腿部惯量</li>
+<li>忽略柔性和间隙</li>
+<li>地面摩擦估计不准</li>
+<li>接触位置有偏差</li>
+<li>状态估计有延迟</li>
+</ul>
+<p>所以工程目标不是追求完美模型，而是找到平衡：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">model accuracy</span><br><span class="line">  vs</span><br><span class="line">online solve time</span><br><span class="line">  vs</span><br><span class="line">closed-loop robustness</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、预测时域怎么选"><a href="#四、预测时域怎么选" class="headerlink" title="四、预测时域怎么选"></a>四、预测时域怎么选</h2><p>预测时域经常被误解成”越长越强”。</p>
+<p>真实情况不是这样。</p>
+<p>设：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">horizon_time = N * dt</span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ul>
+<li><code>N</code> 是预测步数</li>
+<li><code>dt</code> 是离散时间间隔</li>
+<li><code>horizon_time</code> 是总预测时长</li>
+</ul>
+<p>时域太短时，控制器可能看不到下一次接触切换，动作会变得短视。</p>
+<p>时域太长时：</p>
+<ul>
+<li>决策变量更多</li>
+<li>求解时间更长</li>
+<li>远端预测更不可靠</li>
+<li>实时性更难保证</li>
+</ul>
+<p>工程上要围绕步态周期和算力做选择。</p>
+<p>一个实用检查方法是：</p>
+<ol>
+<li>时域能否覆盖至少一次关键接触切换。</li>
+<li>求解器的 <code>p95_solve_time_ms</code> 是否稳定低于 MPC 周期。</li>
+<li>扰动后是否能在数个周期内恢复。</li>
+<li>CPU 抢占和日志写入后是否仍有余量。</li>
+</ol>
+<p>不要只记录平均求解时间。</p>
+<p>至少记录：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">mean_solve_time_ms</span><br><span class="line">p95_solve_time_ms</span><br><span class="line">max_solve_time_ms</span><br><span class="line">deadline_miss_count</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、接触约束是-MPC-的硬骨头"><a href="#五、接触约束是-MPC-的硬骨头" class="headerlink" title="五、接触约束是 MPC 的硬骨头"></a>五、接触约束是 MPC 的硬骨头</h2><p>没有接触约束，腿式 MPC 很容易给出数学上漂亮、物理上不可能的结果。</p>
+<h3 id="5-1-摆动腿不能输出接触力"><a href="#5-1-摆动腿不能输出接触力" class="headerlink" title="5.1 摆动腿不能输出接触力"></a>5.1 摆动腿不能输出接触力</h3><p>如果一条腿当前不接触地面，就应该满足：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">contact_force = 0</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-法向力不能为负"><a href="#5-2-法向力不能为负" class="headerlink" title="5.2 法向力不能为负"></a>5.2 法向力不能为负</h3><p>地面可以推机器人，但普通接触不能把机器人吸住。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">normal_force &gt;= 0</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-摩擦约束不能超限"><a href="#5-3-摩擦约束不能超限" class="headerlink" title="5.3 摩擦约束不能超限"></a>5.3 摩擦约束不能超限</h3><p>如果切向力太大，脚就会滑。</p>
+<p>常见近似是摩擦棱锥：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">abs(force_x) &lt;= friction_coefficient * force_z</span><br><span class="line">abs(force_y) &lt;= friction_coefficient * force_z</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-4-单腿支撑力有上下限"><a href="#5-4-单腿支撑力有上下限" class="headerlink" title="5.4 单腿支撑力有上下限"></a>5.4 单腿支撑力有上下限</h3><p>电机、减速器、结构和足底材料都有能力边界。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">min_normal_force &lt;= force_z &lt;= max_normal_force</span><br></pre></td></tr></table></figure>
+
+<p>约束不是为了让公式更完整，而是为了让结果能交给真机。</p>
+<hr>
+<h2 id="六、落脚点规划和-MPC-怎么配合"><a href="#六、落脚点规划和-MPC-怎么配合" class="headerlink" title="六、落脚点规划和 MPC 怎么配合"></a>六、落脚点规划和 MPC 怎么配合</h2><p>接触力回答的是：</p>
+<p><strong>已经踩住的脚应该怎么发力。</strong></p>
+<p>落脚点规划回答的是：</p>
+<p><strong>下一步应该踩在哪里。</strong></p>
+<p>在平地慢速小跑里，可以先用简单规则：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">target_foothold =</span><br><span class="line">  nominal_foothold</span><br><span class="line">  + velocity_tracking_offset</span><br><span class="line">  + yaw_compensation</span><br></pre></td></tr></table></figure>
+
+<p>进入台阶、石块或坡地后，落脚点还要考虑：</p>
+<ul>
+<li>地面高度</li>
+<li>坡度</li>
+<li>可踩区域</li>
+<li>足端碰撞</li>
+<li>腿部工作空间</li>
+<li>下一阶段支撑裕度</li>
+</ul>
+<p>常见分工有两类：</p>
+<ol>
+<li>上层先给可行落脚区域，MPC 在其上优化机身与接触力。</li>
+<li>MPC 同时优化部分落脚点变量，但要控制问题规模。</li>
+</ol>
+<p>不要一开始就把地形感知、落脚点搜索、质心轨迹和全身动力学全部塞进一个优化器。先跑通平地闭环，再逐层加复杂度。</p>
+<hr>
+<h2 id="七、MPC-和-WBC-的关系"><a href="#七、MPC-和-WBC-的关系" class="headerlink" title="七、MPC 和 WBC 的关系"></a>七、MPC 和 WBC 的关系</h2><p><img src="/images/robotics-mpc/mpc-wbc-stack.png" alt="MPC 与 WBC 的分层控制栈"></p>
+<p>MPC 和 WBC 经常同时出现，但它们不是同一个东西。</p>
+<h3 id="7-1-MPC-负责看未来"><a href="#7-1-MPC-负责看未来" class="headerlink" title="7.1 MPC 负责看未来"></a>7.1 MPC 负责看未来</h3><p>MPC 更关注：</p>
+<ul>
+<li>未来质心轨迹</li>
+<li>机身姿态</li>
+<li>接触模式</li>
+<li>地面反作用力</li>
+<li>约束下的可行性</li>
+</ul>
+<p>它输出的通常是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">desired_base_trajectory</span><br><span class="line">desired_contact_forces</span><br><span class="line">desired_footholds</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-WBC-负责把目标变成全身动作"><a href="#7-2-WBC-负责把目标变成全身动作" class="headerlink" title="7.2 WBC 负责把目标变成全身动作"></a>7.2 WBC 负责把目标变成全身动作</h3><p>WBC 全称是 Whole-Body Control，也就是全身控制。</p>
+<p>它更关注：</p>
+<ul>
+<li>浮动基动力学</li>
+<li>关节加速度</li>
+<li>关节力矩</li>
+<li>足端任务</li>
+<li>接触雅可比</li>
+<li>关节与力矩限制</li>
+</ul>
+<p>它把 MPC 目标转成机器人当前时刻可以执行的命令：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mpc_reference</span><br><span class="line">  -&gt; whole_body_qp</span><br><span class="line">  -&gt; joint_torque_or_joint_target</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-3-为什么要分层"><a href="#7-3-为什么要分层" class="headerlink" title="7.3 为什么要分层"></a>7.3 为什么要分层</h3><p>因为两层面对的时间尺度不同。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">MPC: tens to hundreds of Hz</span><br><span class="line">WBC: hundreds to one thousand Hz</span><br><span class="line">motor loop: one to tens of kHz</span><br></pre></td></tr></table></figure>
+
+<p>MPC 不需要独自承担所有关节级细节。WBC 也不应该只顾当前瞬间，完全看不到未来接触切换。</p>
+<hr>
+<h2 id="八、OCS2-为什么值得重点看"><a href="#八、OCS2-为什么值得重点看" class="headerlink" title="八、OCS2 为什么值得重点看"></a>八、OCS2 为什么值得重点看</h2><p><a target="_blank" rel="noopener" href="https://github.com/leggedrobotics/ocs2">OCS2</a> 是 ETH Zurich Robotic Systems Lab 开源的最优控制软件库。官方文档把它描述为面向机器人系统的最优控制工具箱，覆盖从系统建模、约束和代价定义，到 MPC 接口与机器人部署所需的 MRT 接口。</p>
+<p>官方资料：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/leggedrobotics/ocs2">OCS2 GitHub 仓库</a></li>
+<li><a target="_blank" rel="noopener" href="https://leggedrobotics.github.io/ocs2/">OCS2 官方文档</a></li>
+<li><a target="_blank" rel="noopener" href="https://leggedrobotics.github.io/ocs2/robotic_examples.html#legged-robot">OCS2 Legged Robot 示例</a></li>
+</ul>
+<h3 id="8-1-OCS2-里值得关注什么"><a href="#8-1-OCS2-里值得关注什么" class="headerlink" title="8.1 OCS2 里值得关注什么"></a>8.1 OCS2 里值得关注什么</h3><p>对腿式机器人，建议优先理解：</p>
+<ul>
+<li>状态和输入如何定义</li>
+<li>质心动力学模型如何接入</li>
+<li>接触模式如何切换</li>
+<li>代价函数如何拆分</li>
+<li>约束如何表达</li>
+<li>MPC 和 MRT 如何通信</li>
+<li>求解时间如何记录</li>
+</ul>
+<p>OCS2 官方文档列出了多类最优控制算法，包括 SLQ、iLQR、SQP 和 IPM 路线。不要一上来纠结哪一种算法最强，先用示例理解数据流。</p>
+<h3 id="8-2-legged-control-可以作为工程参考"><a href="#8-2-legged-control-可以作为工程参考" class="headerlink" title="8.2 legged_control 可以作为工程参考"></a>8.2 legged_control 可以作为工程参考</h3><p><a target="_blank" rel="noopener" href="https://github.com/qiayuanl/legged_control">legged_control</a> 是一个基于 OCS2、Pinocchio 与 ROS control 的腿式机器人控制开源项目。它把 MPC、WBC 和仿真链路放在一个可运行工程里，适合观察模块边界。</p>
+<p>阅读顺序建议：</p>
+<ol>
+<li>先看配置文件里的状态权重、输入权重和接触参数。</li>
+<li>再看 MPC 输出如何进入 WBC。</li>
+<li>再看仿真启动方式和日志。</li>
+<li>最后才改模型和求解器。</li>
+</ol>
+<hr>
+<h2 id="九、一个最小仿真实践怎么做"><a href="#九、一个最小仿真实践怎么做" class="headerlink" title="九、一个最小仿真实践怎么做"></a>九、一个最小仿真实践怎么做</h2><p>个人作品集不需要一开始就追求复杂地形。</p>
+<p>更稳妥的四阶段路线是：</p>
+<h3 id="9-1-阶段一：固定接触站立"><a href="#9-1-阶段一：固定接触站立" class="headerlink" title="9.1 阶段一：固定接触站立"></a>9.1 阶段一：固定接触站立</h3><p>目标：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">keep base height</span><br><span class="line">keep roll and pitch near zero</span><br><span class="line">keep all feet in contact</span><br></pre></td></tr></table></figure>
+
+<p>验证：</p>
+<ul>
+<li>接触力总和是否接近机器人重量</li>
+<li>四条腿法向力是否为正</li>
+<li>姿态扰动后是否恢复</li>
+</ul>
+<h3 id="9-2-阶段二：平地速度跟踪"><a href="#9-2-阶段二：平地速度跟踪" class="headerlink" title="9.2 阶段二：平地速度跟踪"></a>9.2 阶段二：平地速度跟踪</h3><p>目标：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">desired_velocity</span><br><span class="line">  -&gt; gait schedule</span><br><span class="line">  -&gt; MPC contact forces</span><br><span class="line">  -&gt; WBC joint commands</span><br></pre></td></tr></table></figure>
+
+<p>验证：</p>
+<ul>
+<li>速度跟踪误差</li>
+<li>接触切换处的力跳变</li>
+<li>求解器耗时</li>
+<li>是否出现 deadline miss</li>
+</ul>
+<h3 id="9-3-阶段三：外力扰动恢复"><a href="#9-3-阶段三：外力扰动恢复" class="headerlink" title="9.3 阶段三：外力扰动恢复"></a>9.3 阶段三：外力扰动恢复</h3><p>给机身施加侧向或前后扰动。</p>
+<p>验证：</p>
+<ul>
+<li>姿态恢复时间</li>
+<li>最大质心偏差</li>
+<li>是否打滑</li>
+<li>是否需要调整落脚点</li>
+</ul>
+<h3 id="9-4-阶段四：简单地形"><a href="#9-4-阶段四：简单地形" class="headerlink" title="9.4 阶段四：简单地形"></a>9.4 阶段四：简单地形</h3><p>加入低台阶、缓坡或高度扰动。</p>
+<p>验证：</p>
+<ul>
+<li>足端是否踩入可行区域</li>
+<li>接触估计是否滞后</li>
+<li>摩擦系数变化是否导致失败</li>
+<li>模型简化是否仍然可接受</li>
+</ul>
+<p>仿真器可以从 <a target="_blank" rel="noopener" href="https://github.com/google-deepmind/mujoco">MuJoCo</a> 开始，也可以使用 OCS2 示例、Gazebo 或项目已有的仿真环境。</p>
+<hr>
+<h2 id="十、调试时不要只看机器人摔没摔"><a href="#十、调试时不要只看机器人摔没摔" class="headerlink" title="十、调试时不要只看机器人摔没摔"></a>十、调试时不要只看机器人摔没摔</h2><p>MPC 调试最怕只看最终视频。</p>
+<p>一次失败至少要记录下面几组数据。</p>
+<h3 id="10-1-状态估计"><a href="#10-1-状态估计" class="headerlink" title="10.1 状态估计"></a>10.1 状态估计</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">base_position</span><br><span class="line">base_velocity</span><br><span class="line">base_orientation</span><br><span class="line">base_angular_velocity</span><br><span class="line">contact_state</span><br></pre></td></tr></table></figure>
+
+<h3 id="10-2-优化器"><a href="#10-2-优化器" class="headerlink" title="10.2 优化器"></a>10.2 优化器</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">solve_time_ms</span><br><span class="line">cost</span><br><span class="line">constraint_violation</span><br><span class="line">iteration_count</span><br><span class="line">deadline_miss</span><br></pre></td></tr></table></figure>
+
+<h3 id="10-3-接触"><a href="#10-3-接触" class="headerlink" title="10.3 接触"></a>10.3 接触</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">planned_contact_mode</span><br><span class="line">estimated_contact_mode</span><br><span class="line">normal_force</span><br><span class="line">tangential_force</span><br><span class="line">friction_margin</span><br></pre></td></tr></table></figure>
+
+<h3 id="10-4-跟踪误差"><a href="#10-4-跟踪误差" class="headerlink" title="10.4 跟踪误差"></a>10.4 跟踪误差</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">velocity_tracking_error</span><br><span class="line">orientation_tracking_error</span><br><span class="line">foothold_error</span><br><span class="line">joint_torque_peak</span><br></pre></td></tr></table></figure>
+
+<p>看到失败后，按顺序排查：</p>
+<ol>
+<li>状态估计是否先漂了。</li>
+<li>接触模式是否错位。</li>
+<li>预测时域是否覆盖关键切换。</li>
+<li>摩擦和力约束是否过松或过紧。</li>
+<li>WBC 是否能跟上 MPC 输出。</li>
+<li>求解器是否在控制周期内完成。</li>
+</ol>
+<hr>
+<h2 id="十一、常见失败模式"><a href="#十一、常见失败模式" class="headerlink" title="十一、常见失败模式"></a>十一、常见失败模式</h2><h3 id="11-1-求解器偶发超时"><a href="#11-1-求解器偶发超时" class="headerlink" title="11.1 求解器偶发超时"></a>11.1 求解器偶发超时</h3><p>平均耗时看起来没问题，但 <code>max_solve_time_ms</code> 偶尔超过周期。</p>
+<p>处理：</p>
+<ul>
+<li>减少预测步数</li>
+<li>降低模型复杂度</li>
+<li>减少不必要约束</li>
+<li>预分配内存</li>
+<li>隔离实时线程</li>
+<li>记录超时后的降级策略</li>
+</ul>
+<h3 id="11-2-机器人频繁打滑"><a href="#11-2-机器人频繁打滑" class="headerlink" title="11.2 机器人频繁打滑"></a>11.2 机器人频繁打滑</h3><p>处理：</p>
+<ul>
+<li>检查摩擦系数</li>
+<li>检查足底材料和仿真参数</li>
+<li>检查切向力是否接近边界</li>
+<li>降低期望加速度</li>
+<li>增加落脚点补偿</li>
+</ul>
+<h3 id="11-3-接触切换时机身抖动"><a href="#11-3-接触切换时机身抖动" class="headerlink" title="11.3 接触切换时机身抖动"></a>11.3 接触切换时机身抖动</h3><p>处理：</p>
+<ul>
+<li>检查接触模式和实际触地是否一致</li>
+<li>给接触力变化加平滑项</li>
+<li>检查摆动腿落地速度</li>
+<li>检查 WBC 权重</li>
+</ul>
+<h3 id="11-4-MPC-输出合理，但关节执行很差"><a href="#11-4-MPC-输出合理，但关节执行很差" class="headerlink" title="11.4 MPC 输出合理，但关节执行很差"></a>11.4 MPC 输出合理，但关节执行很差</h3><p>这通常不是 MPC 单层问题。</p>
+<p>继续检查：</p>
+<ul>
+<li>WBC 任务优先级</li>
+<li>关节力矩限制</li>
+<li>电机带宽</li>
+<li>通信延迟</li>
+<li>状态时间戳</li>
+</ul>
+<hr>
+<h2 id="十二、开源项目清单"><a href="#十二、开源项目清单" class="headerlink" title="十二、开源项目清单"></a>十二、开源项目清单</h2><p>建议按用途选择，不要全部堆进一个项目。</p>
+<h3 id="12-1-MPC-与最优控制"><a href="#12-1-MPC-与最优控制" class="headerlink" title="12.1 MPC 与最优控制"></a>12.1 MPC 与最优控制</h3><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/leggedrobotics/ocs2">OCS2</a>：腿式机器人实时 MPC 的重点学习项目。</li>
+<li><a target="_blank" rel="noopener" href="https://github.com/loco-3d/crocoddyl">Crocoddyl</a>：机器人轨迹优化与最优控制库。</li>
+<li><a target="_blank" rel="noopener" href="https://github.com/RobotLocomotion/drake">Drake</a>：包含建模、规划、控制和仿真工具。</li>
+</ul>
+<h3 id="12-2-动力学"><a href="#12-2-动力学" class="headerlink" title="12.2 动力学"></a>12.2 动力学</h3><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/stack-of-tasks/pinocchio">Pinocchio</a>：快速刚体动力学与雅可比计算。</li>
+</ul>
+<h3 id="12-3-工程参考"><a href="#12-3-工程参考" class="headerlink" title="12.3 工程参考"></a>12.3 工程参考</h3><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/qiayuanl/legged_control">legged_control</a>：OCS2、Pinocchio、ROS control、MPC 与 WBC 集成参考。</li>
+<li><a target="_blank" rel="noopener" href="https://github.com/google-deepmind/mujoco">MuJoCo</a>：适合构建可复现实验和扰动测试。</li>
+</ul>
+<h3 id="12-4-论文入口"><a href="#12-4-论文入口" class="headerlink" title="12.4 论文入口"></a>12.4 论文入口</h3><ul>
+<li><a target="_blank" rel="noopener" href="https://arxiv.org/abs/1809.05537">Dynamic Locomotion in the MIT Cheetah 3 Through Convex Model-Predictive Control</a>：理解四足凸 MPC 的经典入口。</li>
+<li><a target="_blank" rel="noopener" href="https://www.science.org/doi/10.1126/scirobotics.abk2822">Perceptive Locomotion through Nonlinear Model Predictive Control</a>：理解地形感知、落脚点与 NMPC 协同的重要参考。</li>
+</ul>
+<p>前沿项目更新很快。实现前应再次查看官方仓库 README、分支与依赖说明。</p>
+<hr>
+<h2 id="十三、作品集项目怎么做"><a href="#十三、作品集项目怎么做" class="headerlink" title="十三、作品集项目怎么做"></a>十三、作品集项目怎么做</h2><p>一个有含金量的个人项目可以叫：</p>
+<p><strong>基于 OCS2 的四足机器人 MPC + WBC 仿真闭环</strong></p>
+<p>最低交付物包括：</p>
+<ol>
+<li>模型与配置文件。</li>
+<li>平地站立和速度跟踪视频。</li>
+<li>外力扰动恢复视频。</li>
+<li><code>mean / p95 / max</code> 求解耗时统计。</li>
+<li>接触力、速度误差和姿态误差曲线。</li>
+<li>一次失败案例复盘。</li>
+<li>README 中写清楚 MPC 与 WBC 的分工。</li>
+</ol>
+<p>可以把结果表写成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">scenario: flat-ground trot</span><br><span class="line">mpc_frequency_hz: 100</span><br><span class="line">wbc_frequency_hz: 500</span><br><span class="line">mean_solve_time_ms: 3.2</span><br><span class="line">p95_solve_time_ms: 4.8</span><br><span class="line">max_solve_time_ms: 7.1</span><br><span class="line">velocity_rmse_mps: 0.09</span><br><span class="line">deadline_miss_count: 0</span><br></pre></td></tr></table></figure>
+
+<p>不要伪造数字。实际测多少就写多少。</p>
+<hr>
+<h2 id="十四、简历表达怎么写"><a href="#十四、简历表达怎么写" class="headerlink" title="十四、简历表达怎么写"></a>十四、简历表达怎么写</h2><p>不要只写：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">熟悉 MPC 和 WBC</span><br></pre></td></tr></table></figure>
+
+<p>更好的表达是：</p>
+<ul>
+<li>基于 OCS2 搭建四足机器人质心动力学 MPC，完成接触模式切换、摩擦约束、接触力优化与平地速度跟踪仿真。</li>
+<li>将 MPC 输出接入 WBC &#x2F; QP 控制层，记录 <code>mean / p95 / max</code> 求解延迟并分析接触切换阶段的姿态误差与力跳变。</li>
+<li>在 MuJoCo 或 Gazebo 中完成外力扰动、摩擦变化和简单地形回归测试，整理失败日志与参数敏感性报告。</li>
+</ul>
+<p>面试时要能回答：</p>
+<ol>
+<li>为什么 MPC 不直接优化所有关节。</li>
+<li>预测时域为什么不能无限加长。</li>
+<li>摩擦约束如何影响打滑。</li>
+<li>MPC 与 WBC 各自跑多快。</li>
+<li>求解器超时时系统如何降级。</li>
+</ol>
+<hr>
+<h2 id="十五、核心结论"><a href="#十五、核心结论" class="headerlink" title="十五、核心结论"></a>十五、核心结论</h2><ol>
+<li>MPC 的本质是滚动时域在线优化，不是一次性轨迹生成。</li>
+<li>腿式机器人需要 MPC，是因为未来接触切换会直接影响当前动作。</li>
+<li>质心动力学在模型精度和实时性之间提供了实用平衡。</li>
+<li>接触力、摩擦和法向力约束决定优化结果能不能交给真机。</li>
+<li>落脚点规划回答”下一步踩哪里”，MPC 回答”未来怎么稳住并跟踪目标”。</li>
+<li>MPC 负责看未来，WBC 负责把目标落到全身关节与力矩。</li>
+<li>一个可信作品集必须同时展示闭环效果、求解耗时、约束状态和失败复盘。</li>
+</ol>
+<p>做到这里，你就不只是”看过 MPC”，而是开始具备把优化控制塞进实时机器人系统的工程能力。</p>
+<hr>
+<h2 id="系列导航"><a href="#系列导航" class="headerlink" title="系列导航"></a>系列导航</h2><p>本篇在系列中的位置：</p>
+<p><code>总路线图 -&gt; 四足控制 -&gt; MPC 工程实现 -&gt; 人形控制基础 -&gt; 人形全身控制 -&gt; QP 实现 -&gt; 接触力分配 -&gt; 状态估计</code></p>
+<ul>
+<li>上一篇：<a href="/2026/04/06/%E5%9B%9B%E8%B6%B3%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%B6%B3%E7%AB%AF%E8%BD%A8%E8%BF%B9%E3%80%81%E8%B4%A8%E5%BF%83%E4%B8%8E%E7%A8%B3%E5%AE%9A%E6%80%A7/" title="四足机器人控制基础：足端轨迹、质心与稳定性">四足机器人控制基础：足端轨迹、质心与稳定性</a></li>
+<li>下一篇：<a href="/2026/06/01/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8EDrake%E5%88%B0Genesis/" title="机器人轨迹优化与可微仿真：从 Drake 到 Genesis">机器人轨迹优化与可微仿真：从 Drake 到 Genesis</a></li>
+<li>回到总路线：<a href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</a></li>
+</ul>
+<link rel="stylesheet" href="/css/spoiler.css" type="text/css"><script src="/js/spoiler.js" type="text/javascript" async></script></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://LJS515.github.io/">YiQiu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://ljs515.github.io/2026/06/01/MPC%E5%9C%A8%E8%85%BF%E5%BC%8F%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%87%8C%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E6%A8%A1%E5%9E%8B%E9%A2%84%E6%B5%8B%E5%88%B0%E5%AE%9E%E6%97%B6%E6%8E%A7%E5%88%B6/">https://ljs515.github.io/2026/06/01/MPC%E5%9C%A8%E8%85%BF%E5%BC%8F%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%87%8C%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E6%A8%A1%E5%9E%8B%E9%A2%84%E6%B5%8B%E5%88%B0%E5%AE%9E%E6%97%B6%E6%8E%A7%E5%88%B6/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://ljs515.github.io" target="_blank">YiQiuのblog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD/">具身智能</a><a class="post-meta__tags" href="/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA/">机器人</a><a class="post-meta__tags" href="/tags/MPC/">MPC</a><a class="post-meta__tags" href="/tags/%E8%85%BF%E5%BC%8F%E6%9C%BA%E5%99%A8%E4%BA%BA/">腿式机器人</a><a class="post-meta__tags" href="/tags/%E5%9B%9B%E8%B6%B3%E6%9C%BA%E5%99%A8%E4%BA%BA/">四足机器人</a><a class="post-meta__tags" href="/tags/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA/">人形机器人</a><a class="post-meta__tags" href="/tags/%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/">全身控制</a><a class="post-meta__tags" href="/tags/OCS2/">OCS2</a><a class="post-meta__tags" href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/">开源项目</a></div><div class="post-share"><div class="social-share" data-image="/images/post-covers/legged-mpc.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>感谢您的支持</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechat.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wechat.jpg" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpg" alt="alipay"/></a><div class="post-qr-code-desc">alipay</div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related  no-desc" href="/2026/06/01/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8EDrake%E5%88%B0Genesis/" title="机器人轨迹优化与可微仿真：从 Drake 到 Genesis"><img class="cover" src="/images/post-covers/trajectory-optimization.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">机器人轨迹优化与可微仿真：从 Drake 到 Genesis</div></div></div></a><a class="pagination-related  no-desc" href="/2026/05/25/%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%83%A8%E7%BD%B2%E4%B8%8E%E4%B8%8A%E7%BA%BF%EF%BC%9AONNX%E3%80%81TensorRT%E3%80%81%E5%AE%89%E5%85%A8%E5%8C%85%E7%BB%9C%E4%B8%8E%E5%BD%B1%E5%AD%90%E6%A8%A1%E5%BC%8F/" title="机器人部署与上线：ONNX、TensorRT、安全包络与影子模式"><img class="cover" src="/images/post-covers/deployment.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">机器人部署与上线：ONNX、TensorRT、安全包络与影子模式</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E5%8A%A8%E5%8A%9B%E5%AD%A6%E6%96%B9%E7%A8%8B%E5%88%B0QP%E6%B1%82%E8%A7%A3/" title="人形机器人中的全身控制实现：从动力学方程到 QP 求解"><img class="cover" src="/images/post-covers/humanoid-qp.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人中的全身控制实现：从动力学方程到 QP 求解</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%AD%E7%9A%84%E6%8E%A5%E8%A7%A6%E5%8A%9B%E5%88%86%E9%85%8D%E4%B8%8E%E6%94%AF%E6%92%91%E7%BA%A6%E6%9D%9F/" title="人形机器人中的接触力分配与支撑约束"><img class="cover" src="/images/post-covers/humanoid-contact.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人中的接触力分配与支撑约束</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6%EF%BC%9A%E4%BB%BB%E5%8A%A1%E3%80%81%E7%BA%A6%E6%9D%9F%E4%B8%8EQP/" title="人形机器人全身控制：任务、约束与 QP"><img class="cover" src="/images/post-covers/humanoid-wbc.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">人形机器人全身控制：任务、约束与 QP</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"><img class="cover" src="/images/post-covers/roadmap.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</div></div></div></a><a class="pagination-related no-desc" href="/2026/07/01/Mobile%20ALOHA%E4%B8%8EHumanPlus%EF%BC%9A%E7%A7%BB%E5%8A%A8%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%BA%E5%BD%A2%E7%A4%BA%E6%95%99%E6%95%B0%E6%8D%AE%E5%85%A8%E6%B5%81%E7%A8%8B/" title="Mobile ALOHA 与 HumanPlus：移动操作与人形示教数据全流程"><img class="cover" src="/images/post-covers/mobile-aloha-humanplus.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-01</div><div class="info-item-2">Mobile ALOHA 与 HumanPlus：移动操作与人形示教数据全流程</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"><img class="cover" src="/images/post-covers/vla.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="author-info-name">YiQiu</div><div class="author-info-description">专注于嵌入式技术研究 | ROS学习之路 | 深度学习&人工智能 | 算法研究</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">27</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">80</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" href="https://LJS515.github.io/"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/LJS515" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:3435583503@qq.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><style>
+.announcement-card {
+    --main-color: #ff00ff;
+    --secondary-color: #00ffff;
+    --highlight-color: #ff5500;
+    position: relative;
+    overflow: hidden;
+}
+.announcement-content {
+    font-size: 1rem; 
+    line-height: 1.2; 
+    color: #ffffff;
+    position: relative;
+}
+.keyword {
+    color: var(--secondary-color);
+    font-weight: 300;
+    font-size: 1.1rem; 
+}
+.highlight {
+    color: var(--main-color);
+    font-weight: 1000;
+    font-size: 1.2rem; 
+}
+.announcement-content ul {
+    list-style-type: none;
+    margin: 0.8rem 0; 
+    padding-left: 1.5rem;   
+}
+</style>
+<div class="announcement-card">
+    <div class="announcement-content">
+        <p><span class="highlight">欢迎来到「YiQiu」ROS&AI研习录</span>！🎉</p>
+        <p><strong>本平台专注于：</strong></p>
+        <ul>
+            <li><span class="keyword">> 嵌入式系统开发</span></li>
+            <li><span class="keyword">> ROS学习</span></li>
+            <li><span class="keyword">> 算法研究</span></li>
+            <li><span class="keyword">> 深度学习&人工智能</span></li>
+        </ul>
+        <p>🌟 <strong>加入我们，一起探索机器人的奥秘，提升AI实战能力，共同创造更美好的人工智能！</strong></p>
+    </div>
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#MPC-%E5%9C%A8%E8%85%BF%E5%BC%8F%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%87%8C%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E6%A8%A1%E5%9E%8B%E9%A2%84%E6%B5%8B%E5%88%B0%E5%AE%9E%E6%97%B6%E6%8E%A7%E5%88%B6"><span class="toc-number">1.</span> <span class="toc-text">MPC 在腿式机器人里的工程实现：从模型预测到实时控制</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81MPC-%E4%B8%8D%E6%98%AF%E4%B8%80%E6%AC%A1%E6%80%A7%E8%BD%A8%E8%BF%B9%E8%A7%84%E5%88%92"><span class="toc-number">1.1.</span> <span class="toc-text">一、MPC 不是一次性轨迹规划</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E8%85%BF%E5%BC%8F%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%BA%E4%BB%80%E4%B9%88%E7%89%B9%E5%88%AB%E9%9C%80%E8%A6%81-MPC"><span class="toc-number">1.2.</span> <span class="toc-text">二、腿式机器人为什么特别需要 MPC</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E5%85%88%E7%94%A8%E4%BB%80%E4%B9%88%E6%A8%A1%E5%9E%8B%EF%BC%9A%E8%B4%A8%E5%BF%83%E5%8A%A8%E5%8A%9B%E5%AD%A6"><span class="toc-number">1.3.</span> <span class="toc-text">三、先用什么模型：质心动力学</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E8%B4%A8%E5%BF%83%E6%A8%A1%E5%9E%8B%E4%BF%9D%E7%95%99%E4%BB%80%E4%B9%88"><span class="toc-number">1.3.1.</span> <span class="toc-text">3.1 质心模型保留什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E7%AE%80%E5%8C%96%E6%A8%A1%E5%9E%8B%E7%9A%84%E4%BB%A3%E4%BB%B7"><span class="toc-number">1.3.2.</span> <span class="toc-text">3.2 简化模型的代价</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E9%A2%84%E6%B5%8B%E6%97%B6%E5%9F%9F%E6%80%8E%E4%B9%88%E9%80%89"><span class="toc-number">1.4.</span> <span class="toc-text">四、预测时域怎么选</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E6%8E%A5%E8%A7%A6%E7%BA%A6%E6%9D%9F%E6%98%AF-MPC-%E7%9A%84%E7%A1%AC%E9%AA%A8%E5%A4%B4"><span class="toc-number">1.5.</span> <span class="toc-text">五、接触约束是 MPC 的硬骨头</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E6%91%86%E5%8A%A8%E8%85%BF%E4%B8%8D%E8%83%BD%E8%BE%93%E5%87%BA%E6%8E%A5%E8%A7%A6%E5%8A%9B"><span class="toc-number">1.5.1.</span> <span class="toc-text">5.1 摆动腿不能输出接触力</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E6%B3%95%E5%90%91%E5%8A%9B%E4%B8%8D%E8%83%BD%E4%B8%BA%E8%B4%9F"><span class="toc-number">1.5.2.</span> <span class="toc-text">5.2 法向力不能为负</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E6%91%A9%E6%93%A6%E7%BA%A6%E6%9D%9F%E4%B8%8D%E8%83%BD%E8%B6%85%E9%99%90"><span class="toc-number">1.5.3.</span> <span class="toc-text">5.3 摩擦约束不能超限</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-%E5%8D%95%E8%85%BF%E6%94%AF%E6%92%91%E5%8A%9B%E6%9C%89%E4%B8%8A%E4%B8%8B%E9%99%90"><span class="toc-number">1.5.4.</span> <span class="toc-text">5.4 单腿支撑力有上下限</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E8%90%BD%E8%84%9A%E7%82%B9%E8%A7%84%E5%88%92%E5%92%8C-MPC-%E6%80%8E%E4%B9%88%E9%85%8D%E5%90%88"><span class="toc-number">1.6.</span> <span class="toc-text">六、落脚点规划和 MPC 怎么配合</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81MPC-%E5%92%8C-WBC-%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="toc-number">1.7.</span> <span class="toc-text">七、MPC 和 WBC 的关系</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-MPC-%E8%B4%9F%E8%B4%A3%E7%9C%8B%E6%9C%AA%E6%9D%A5"><span class="toc-number">1.7.1.</span> <span class="toc-text">7.1 MPC 负责看未来</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-WBC-%E8%B4%9F%E8%B4%A3%E6%8A%8A%E7%9B%AE%E6%A0%87%E5%8F%98%E6%88%90%E5%85%A8%E8%BA%AB%E5%8A%A8%E4%BD%9C"><span class="toc-number">1.7.2.</span> <span class="toc-text">7.2 WBC 负责把目标变成全身动作</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%88%86%E5%B1%82"><span class="toc-number">1.7.3.</span> <span class="toc-text">7.3 为什么要分层</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81OCS2-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%80%BC%E5%BE%97%E9%87%8D%E7%82%B9%E7%9C%8B"><span class="toc-number">1.8.</span> <span class="toc-text">八、OCS2 为什么值得重点看</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-OCS2-%E9%87%8C%E5%80%BC%E5%BE%97%E5%85%B3%E6%B3%A8%E4%BB%80%E4%B9%88"><span class="toc-number">1.8.1.</span> <span class="toc-text">8.1 OCS2 里值得关注什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-legged-control-%E5%8F%AF%E4%BB%A5%E4%BD%9C%E4%B8%BA%E5%B7%A5%E7%A8%8B%E5%8F%82%E8%80%83"><span class="toc-number">1.8.2.</span> <span class="toc-text">8.2 legged_control 可以作为工程参考</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E4%B8%80%E4%B8%AA%E6%9C%80%E5%B0%8F%E4%BB%BF%E7%9C%9F%E5%AE%9E%E8%B7%B5%E6%80%8E%E4%B9%88%E5%81%9A"><span class="toc-number">1.9.</span> <span class="toc-text">九、一个最小仿真实践怎么做</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-%E9%98%B6%E6%AE%B5%E4%B8%80%EF%BC%9A%E5%9B%BA%E5%AE%9A%E6%8E%A5%E8%A7%A6%E7%AB%99%E7%AB%8B"><span class="toc-number">1.9.1.</span> <span class="toc-text">9.1 阶段一：固定接触站立</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-%E9%98%B6%E6%AE%B5%E4%BA%8C%EF%BC%9A%E5%B9%B3%E5%9C%B0%E9%80%9F%E5%BA%A6%E8%B7%9F%E8%B8%AA"><span class="toc-number">1.9.2.</span> <span class="toc-text">9.2 阶段二：平地速度跟踪</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-3-%E9%98%B6%E6%AE%B5%E4%B8%89%EF%BC%9A%E5%A4%96%E5%8A%9B%E6%89%B0%E5%8A%A8%E6%81%A2%E5%A4%8D"><span class="toc-number">1.9.3.</span> <span class="toc-text">9.3 阶段三：外力扰动恢复</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-4-%E9%98%B6%E6%AE%B5%E5%9B%9B%EF%BC%9A%E7%AE%80%E5%8D%95%E5%9C%B0%E5%BD%A2"><span class="toc-number">1.9.4.</span> <span class="toc-text">9.4 阶段四：简单地形</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E8%B0%83%E8%AF%95%E6%97%B6%E4%B8%8D%E8%A6%81%E5%8F%AA%E7%9C%8B%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%91%94%E6%B2%A1%E6%91%94"><span class="toc-number">1.10.</span> <span class="toc-text">十、调试时不要只看机器人摔没摔</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-%E7%8A%B6%E6%80%81%E4%BC%B0%E8%AE%A1"><span class="toc-number">1.10.1.</span> <span class="toc-text">10.1 状态估计</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-%E4%BC%98%E5%8C%96%E5%99%A8"><span class="toc-number">1.10.2.</span> <span class="toc-text">10.2 优化器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-3-%E6%8E%A5%E8%A7%A6"><span class="toc-number">1.10.3.</span> <span class="toc-text">10.3 接触</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-4-%E8%B7%9F%E8%B8%AA%E8%AF%AF%E5%B7%AE"><span class="toc-number">1.10.4.</span> <span class="toc-text">10.4 跟踪误差</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E5%B8%B8%E8%A7%81%E5%A4%B1%E8%B4%A5%E6%A8%A1%E5%BC%8F"><span class="toc-number">1.11.</span> <span class="toc-text">十一、常见失败模式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-%E6%B1%82%E8%A7%A3%E5%99%A8%E5%81%B6%E5%8F%91%E8%B6%85%E6%97%B6"><span class="toc-number">1.11.1.</span> <span class="toc-text">11.1 求解器偶发超时</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%A2%91%E7%B9%81%E6%89%93%E6%BB%91"><span class="toc-number">1.11.2.</span> <span class="toc-text">11.2 机器人频繁打滑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-3-%E6%8E%A5%E8%A7%A6%E5%88%87%E6%8D%A2%E6%97%B6%E6%9C%BA%E8%BA%AB%E6%8A%96%E5%8A%A8"><span class="toc-number">1.11.3.</span> <span class="toc-text">11.3 接触切换时机身抖动</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-4-MPC-%E8%BE%93%E5%87%BA%E5%90%88%E7%90%86%EF%BC%8C%E4%BD%86%E5%85%B3%E8%8A%82%E6%89%A7%E8%A1%8C%E5%BE%88%E5%B7%AE"><span class="toc-number">1.11.4.</span> <span class="toc-text">11.4 MPC 输出合理，但关节执行很差</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE%E6%B8%85%E5%8D%95"><span class="toc-number">1.12.</span> <span class="toc-text">十二、开源项目清单</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#12-1-MPC-%E4%B8%8E%E6%9C%80%E4%BC%98%E6%8E%A7%E5%88%B6"><span class="toc-number">1.12.1.</span> <span class="toc-text">12.1 MPC 与最优控制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-2-%E5%8A%A8%E5%8A%9B%E5%AD%A6"><span class="toc-number">1.12.2.</span> <span class="toc-text">12.2 动力学</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-3-%E5%B7%A5%E7%A8%8B%E5%8F%82%E8%80%83"><span class="toc-number">1.12.3.</span> <span class="toc-text">12.3 工程参考</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-4-%E8%AE%BA%E6%96%87%E5%85%A5%E5%8F%A3"><span class="toc-number">1.12.4.</span> <span class="toc-text">12.4 论文入口</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%89%E3%80%81%E4%BD%9C%E5%93%81%E9%9B%86%E9%A1%B9%E7%9B%AE%E6%80%8E%E4%B9%88%E5%81%9A"><span class="toc-number">1.13.</span> <span class="toc-text">十三、作品集项目怎么做</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E5%9B%9B%E3%80%81%E7%AE%80%E5%8E%86%E8%A1%A8%E8%BE%BE%E6%80%8E%E4%B9%88%E5%86%99"><span class="toc-number">1.14.</span> <span class="toc-text">十四、简历表达怎么写</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%94%E3%80%81%E6%A0%B8%E5%BF%83%E7%BB%93%E8%AE%BA"><span class="toc-number">1.15.</span> <span class="toc-text">十五、核心结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%B3%BB%E5%88%97%E5%AF%BC%E8%88%AA"><span class="toc-number">1.16.</span> <span class="toc-text">系列导航</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/07/01/Mobile%20ALOHA%E4%B8%8EHumanPlus%EF%BC%9A%E7%A7%BB%E5%8A%A8%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%BA%E5%BD%A2%E7%A4%BA%E6%95%99%E6%95%B0%E6%8D%AE%E5%85%A8%E6%B5%81%E7%A8%8B/" title="Mobile ALOHA 与 HumanPlus：移动操作与人形示教数据全流程"><img src="/images/post-covers/mobile-aloha-humanplus.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="Mobile ALOHA 与 HumanPlus：移动操作与人形示教数据全流程"/></a><div class="content"><a class="title" href="/2026/07/01/Mobile%20ALOHA%E4%B8%8EHumanPlus%EF%BC%9A%E7%A7%BB%E5%8A%A8%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%BA%E5%BD%A2%E7%A4%BA%E6%95%99%E6%95%B0%E6%8D%AE%E5%85%A8%E6%B5%81%E7%A8%8B/" title="Mobile ALOHA 与 HumanPlus：移动操作与人形示教数据全流程">Mobile ALOHA 与 HumanPlus：移动操作与人形示教数据全流程</a><time datetime="2026-07-01T07:00:00.000Z" title="发表于 2026-07-01 15:00:00">2026-07-01</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/01/%E7%81%B5%E5%B7%A7%E6%89%8B%E6%8E%A7%E5%88%B6%E4%B8%8E%E8%A7%A6%E8%A7%89%E6%84%9F%E7%9F%A5/" title="灵巧手控制与触觉感知：从多指协同到接触闭环"><img src="/images/post-covers/dexterous-hand-tactile.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="灵巧手控制与触觉感知：从多指协同到接触闭环"/></a><div class="content"><a class="title" href="/2026/07/01/%E7%81%B5%E5%B7%A7%E6%89%8B%E6%8E%A7%E5%88%B6%E4%B8%8E%E8%A7%A6%E8%A7%89%E6%84%9F%E7%9F%A5/" title="灵巧手控制与触觉感知：从多指协同到接触闭环">灵巧手控制与触觉感知：从多指协同到接触闭环</a><time datetime="2026-07-01T02:00:00.000Z" title="发表于 2026-07-01 10:00:00">2026-07-01</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/01/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8EDrake%E5%88%B0Genesis/" title="机器人轨迹优化与可微仿真：从 Drake 到 Genesis"><img src="/images/post-covers/trajectory-optimization.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人轨迹优化与可微仿真：从 Drake 到 Genesis"/></a><div class="content"><a class="title" href="/2026/06/01/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8EDrake%E5%88%B0Genesis/" title="机器人轨迹优化与可微仿真：从 Drake 到 Genesis">机器人轨迹优化与可微仿真：从 Drake 到 Genesis</a><time datetime="2026-06-01T06:00:00.000Z" title="发表于 2026-06-01 14:00:00">2026-06-01</time></div></div></div></div></div></div></main><footer id="footer" style="background-color: rgba(45, 10, 61, 0.2);"><div class="footer-other"><div class="footer-copyright"></div><div class="footer_custom_text"><style>
+  .footer {
+    text-align: center;
+    position: relative;
+  }
+  .social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .social-links i {
+    color: #8400ff;
+  }
+  .social-link {
+    color: #8a2be2;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: rgba(138, 43, 226, 0.1);
+  }
+  .social-link:hover {
+    color: #ffffff;
+    background: #892be2;
+    transform: translateY(-3px) scale(1.08);
+    box-shadow: 0 5px 15px rgba(138, 43, 226, 0.4);
+    text-decoration: none !important;
+  }
+  .footer p {
+    margin: 0.5rem 0;
+    line-height: 1.4;
+  }
+  .copyright {
+    font-size: 1.1rem;
+    color: #c08bdf;
+    font-weight: 400;
+  }
+  .tagline {
+    font-size: 0.8rem;
+    color: #8a2be2;
+    font-style: italic;
+    font-weight: 500;
+  }
+  .footer-note {
+    font-size: 0.78rem;
+    color: rgba(219, 142, 255, 0.8);
+  }
+</style>
+<div class="footer">
+  <div class="social-links">
+    <a href="https://github.com/LJS515" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+    <a href="https://blog.csdn.net/2401_84593538" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="CSDN" title="CSDN">
+      <i class="fas fa-code"></i>
+    </a>
+    <a href="https://www.xiaohongshu.com/user/profile/5e8a0aae0000000001002ce4" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="小红书" title="小红书">
+      <i class="fas fa-book"></i>
+    </a>
+    <a href="https://space.bilibili.com/1158177941" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="bilibili" title="bilibili">
+      <i class="fab fa-bilibili"></i>
+    </a>
+  </div>
+  <p class="copyright">© 2025 YiQiuのblog</p>
+  <p class="tagline">&gt; Stay curious, stay hacking, stay anime! &lt;</p>
+  <p class="footer-note">静态站点不再展示伪造访问量。后续如需真实统计，建议接入 Umami、Google Analytics 或 Cloudflare Web Analytics。</p>
+</div>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.2"></script><script src="/js/main.js?v=5.5.2"></script><div class="js-pjax"></div><script defer src="/js/cursor.js"></script><script src="/js/sakura.js"></script><meting-js class="no-destroy" id="8932390" server="netease" type="playlist" fixed="true" autoplay="true" order="random" volume="0.3" list-folded="false" list-max-height="36vh"> </meting-js><link rel="stylesheet" href="https://npm.elemecdn.com/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'"><script src="https://npm.elemecdn.com/aplayer/dist/APlayer.min.js"></script><script src="https://npm.elemecdn.com/meting/dist/Meting.min.js"></script><script>(() => {
+  const destroyAplayer = () => {
+    if (window.aplayers) {
+      for (let i = 0; i < window.aplayers.length; i++) {
+        if (!window.aplayers[i].options.fixed) {
+          window.aplayers[i].destroy()
+        }
+      }
+    }
+  }
+
+  const runMetingJS = () => {
+    typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+  }
+
+  btf.addGlobalFn('pjaxSend', destroyAplayer, 'destroyAplayer')
+  btf.addGlobalFn('pjaxComplete', loadMeting, 'runMetingJS')
+})()</script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      const usePjax = true
+      true
+        ? (usePjax ? pjax.loadUrl('/404.html') : window.location.href = '/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})()</script><script async data-pjax src="/"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词..." type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.2"></script></div></div><!-- hexo injector body_end start --><script data-pjax>
+  function butterfly_categories_card_injector_config(){
+    // 检查容器是否存在
+    var parent_div_git = document.getElementById('recent-posts');
+    // 如果容器不存在，则动态创建
+    if (!parent_div_git) {
+      console.warn('butterfly_categories_card: 挂载容器不存在，正在动态创建...');
+      // 创建新容器（默认插入到页面主体顶部）
+      parent_div_git = document.createElement('div');
+      parent_div_git.id = 'recent-posts'; // 赋予配置的ID
+      document.querySelector('#page').prepend(parent_div_git); // 插入到 #content-inner 内
+    }
+    var item_html = '<style>li.categoryBar-list-item{width:32.3%;}.categoryBar-list{max-height: 950px;overflow:auto;}.categoryBar-list::-webkit-scrollbar{width:0!important}@media screen and (max-width: 650px){.categoryBar-list{max-height: 800px;}}</style><div class="recent-post-item" style="height:auto;width:100%;padding:0px;"><div id="categoryBar"><ul class="categoryBar-list"><li class="categoryBar-list-item" style="background:url(/img/11.png);"> <a class="categoryBar-list-link" onclick="pjax.loadUrl(&quot;/categories/具身智能教程/&quot;);" href="javascript:void(0);">具身智能教程</a><span class="categoryBar-list-count">25</span><span class="categoryBar-list-descr">1</span></li></ul></div></div>';
+    console.log('已挂载 butterfly_categories_card');
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+  }
+  // 路径匹配逻辑（使用 startsWith）
+  if (location.pathname.startsWith('/categories/') || '/categories/' === 'all') {
+    butterfly_categories_card_injector_config();
+  }
+  </script><script data-pjax>
+  function butterfly_swiper_injector_config(){
+    var parent_div_git = document.getElementById('recent-posts');
+    var item_html = '<div class="recent-post-item" style="height: auto;width: 100%"><div class="blog-slider swiper-container-fade swiper-container-horizontal" id="swiper_container"><div class="blog-slider__wrp swiper-wrapper" style="transition-duration: 0ms;"></div><div class="blog-slider__pagination swiper-pagination-clickable swiper-pagination-bullets"></div></div></div>';
+    console.log('已挂载butterfly_swiper')
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+    }
+  var elist = 'undefined'.split(',');
+  var cpage = location.pathname;
+  var epage = '/';
+  var flag = 0;
+
+  for (var i=0;i<elist.length;i++){
+    if (cpage.includes(elist[i])){
+      flag++;
+    }
+  }
+
+  if ((epage ==='all')&&(flag == 0)){
+    butterfly_swiper_injector_config();
+  }
+  else if (epage === cpage){
+    butterfly_swiper_injector_config();
+  }
+  </script><script defer src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.js"></script><script defer data-pjax src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper_init.js"></script><!-- hexo injector body_end end --><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"right","width":200,"height":400},"mobile":{"show":true},"react":{"opacity":0.7},"log":false});</script></body></html>

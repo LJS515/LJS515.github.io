@@ -1,0 +1,796 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>机器人轨迹优化与可微仿真：从 Drake 到 Genesis | YiQiuのblog</title><meta name="author" content="YiQiu"><meta name="copyright" content="YiQiu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#f5f0fa"><meta name="description" content="机器人轨迹优化与可微仿真：从 Drake 到 Genesis 前一篇 MPC 文章解决的是： 机器人如何在实时闭环里滚动预测未来，并持续修正当前动作。 但在进入在线控制之前，还有一个更基础的问题： 给定机器人模型、起点、终点和约束，如何算出一条真正可执行的运动轨迹。 这就是轨迹优化。 近几年，可微仿真又给这条路线加了一种新工具：如果仿真器能把任务损失对参数、控制量或策略参数的梯度传回来，许多原本只">
+<meta property="og:type" content="article">
+<meta property="og:title" content="机器人轨迹优化与可微仿真：从 Drake 到 Genesis">
+<meta property="og:url" content="https://ljs515.github.io/2026/06/01/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8EDrake%E5%88%B0Genesis/index.html">
+<meta property="og:site_name" content="YiQiuのblog">
+<meta property="og:description" content="机器人轨迹优化与可微仿真：从 Drake 到 Genesis 前一篇 MPC 文章解决的是： 机器人如何在实时闭环里滚动预测未来，并持续修正当前动作。 但在进入在线控制之前，还有一个更基础的问题： 给定机器人模型、起点、终点和约束，如何算出一条真正可执行的运动轨迹。 这就是轨迹优化。 近几年，可微仿真又给这条路线加了一种新工具：如果仿真器能把任务损失对参数、控制量或策略参数的梯度传回来，许多原本只">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ljs515.github.io/images/post-covers/trajectory-optimization.png">
+<meta property="article:published_time" content="2026-06-01T06:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-01T11:17:44.990Z">
+<meta property="article:author" content="YiQiu">
+<meta property="article:tag" content="具身智能">
+<meta property="article:tag" content="机器人">
+<meta property="article:tag" content="开源项目">
+<meta property="article:tag" content="MuJoCo">
+<meta property="article:tag" content="轨迹优化">
+<meta property="article:tag" content="可微仿真">
+<meta property="article:tag" content="Drake">
+<meta property="article:tag" content="Genesis">
+<meta property="article:tag" content="MJX">
+<meta property="article:tag" content="最优控制">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ljs515.github.io/images/post-covers/trajectory-optimization.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "机器人轨迹优化与可微仿真：从 Drake 到 Genesis",
+  "url": "https://ljs515.github.io/2026/06/01/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8EDrake%E5%88%B0Genesis/",
+  "image": "https://ljs515.github.io/images/post-covers/trajectory-optimization.png",
+  "datePublished": "2026-06-01T06:00:00.000Z",
+  "dateModified": "2026-06-01T11:17:44.990Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YiQiu",
+      "url": "https://LJS515.github.io/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/01.png"><link rel="canonical" href="https://ljs515.github.io/2026/06/01/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8EDrake%E5%88%B0Genesis/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.2"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#2d0a3d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f5f0fa')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chewy&amp;family=Ma+Shan+Zheng&amp;family=Fredoka+One&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":300,"languages":{"author":"作者: YiQiu","link":"链接: ","source":"来源: YiQiuのblog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '机器人轨迹优化与可微仿真：从 Drake 到 Genesis',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Chewy&family=Fredoka+One&family=Caveat:wght@400;700&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet"><!-- hexo injector head_end start --><link rel="stylesheet" href="/css/categorybar.css"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiperstyle.css" media="print" onload="this.media='all'"><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-image: url(/img/03.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">27</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">80</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/images/post-covers/trajectory-optimization.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/img/01.png" alt="Logo"><span class="site-name">YiQiuのblog</span></a><a class="nav-page-title" href="/"><span class="site-name">机器人轨迹优化与可微仿真：从 Drake 到 Genesis</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">机器人轨迹优化与可微仿真：从 Drake 到 Genesis</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-06-01T06:00:00.000Z" title="发表于 2026-06-01 14:00:00">2026-06-01</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-06-01T11:17:44.990Z" title="更新于 2026-06-01 19:17:44">2026-06-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%95%99%E7%A8%8B/">具身智能教程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">3.4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>11分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div class="ai-summary"><div class="ai-explanation" style="display: block;" data-summary="这篇文章从机器人工程视角讲清楚轨迹优化与可微仿真的基本链路，覆盖决策变量、代价、约束、direct transcription、direct collocation、shooting、Drake 实践、Genesis 梯度接口、MJX 与 Brax 的定位变化、调试方法、作品集项目与简历表达。目标是把“让机器人从 A 到 B”变成可求解、可验证、可复盘的工程问题。">YiQiuAI正在绞尽脑汁想思路ING···</div><div class="ai-title"> <div class="ai-title-left"> <i class="fa-brands fa-slack"></i><div class="ai-title-text">YiQiuのAI摘要</div></div><div class="ai-tag" id="ai-tag">HunYuan-Lite</div></div></div><div id="post-outdate-notice" data="{&quot;limitDay&quot;:365,&quot;messagePrev&quot;:&quot;本文最后更新于&quot;,&quot;messageNext&quot;:&quot;天前，部分内容可能已失效&quot;,&quot;postUpdate&quot;:&quot;2026-06-01 19:17:44&quot;}" hidden></div><h1 id="机器人轨迹优化与可微仿真：从-Drake-到-Genesis"><a href="#机器人轨迹优化与可微仿真：从-Drake-到-Genesis" class="headerlink" title="机器人轨迹优化与可微仿真：从 Drake 到 Genesis"></a>机器人轨迹优化与可微仿真：从 Drake 到 Genesis</h1><p><img src="/images/post-covers/trajectory-optimization.png" alt="机器人轨迹优化与可微仿真封面"></p>
+<p>前一篇 MPC 文章解决的是：</p>
+<p><strong>机器人如何在实时闭环里滚动预测未来，并持续修正当前动作。</strong></p>
+<p>但在进入在线控制之前，还有一个更基础的问题：</p>
+<p><strong>给定机器人模型、起点、终点和约束，如何算出一条真正可执行的运动轨迹。</strong></p>
+<p>这就是轨迹优化。</p>
+<p>近几年，可微仿真又给这条路线加了一种新工具：如果仿真器能把任务损失对参数、控制量或策略参数的梯度传回来，许多原本只能靠黑盒搜索和手工调参的问题，就可以使用梯度优化。</p>
+<p>但先说结论：</p>
+<p><strong>轨迹优化不是画一条平滑曲线。可微仿真也不是把所有机器人问题自动变简单。</strong></p>
+<p>真正有价值的是理解：</p>
+<ul>
+<li>哪些变量需要优化</li>
+<li>哪些约束必须满足</li>
+<li>哪种离散化适合当前问题</li>
+<li>接触和碰撞为什么难</li>
+<li>梯度什么时候可信</li>
+<li>结果如何进入 MPC、WBC 或真机控制器</li>
+</ul>
+<hr>
+<h2 id="一、轨迹优化到底优化什么"><a href="#一、轨迹优化到底优化什么" class="headerlink" title="一、轨迹优化到底优化什么"></a>一、轨迹优化到底优化什么</h2><p><img src="/images/robotics-trajopt/trajectory-optimization-loop.png" alt="机器人轨迹优化工程闭环"></p>
+<p>轨迹优化的输入通常包括：</p>
+<ul>
+<li>初始状态</li>
+<li>目标状态</li>
+<li>机器人动力学</li>
+<li>关节限制</li>
+<li>控制输入限制</li>
+<li>碰撞约束</li>
+<li>接触约束</li>
+<li>时间预算</li>
+</ul>
+<p>输出不是一个点，而是一段随时间变化的状态和控制序列：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">x_0, x_1, x_2, ... x_N</span><br><span class="line">u_0, u_1, u_2, ... u_N-1</span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ul>
+<li><code>x_k</code> 是第 <code>k</code> 个时刻的状态</li>
+<li><code>u_k</code> 是第 <code>k</code> 个时刻的控制输入</li>
+<li><code>N</code> 是离散时间步数</li>
+</ul>
+<p>轨迹优化希望找到：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">best_trajectory =</span><br><span class="line">  minimize(cost)</span><br><span class="line">  subject_to(dynamics, limits, collision, contact)</span><br></pre></td></tr></table></figure>
+
+<p>这个定义很重要。</p>
+<p>如果只让路径几何上避开障碍，但机器人根本无法按那条路径加速、刹车或保持接触，它就不是可执行轨迹。</p>
+<hr>
+<h2 id="二、代价函数和约束怎么分工"><a href="#二、代价函数和约束怎么分工" class="headerlink" title="二、代价函数和约束怎么分工"></a>二、代价函数和约束怎么分工</h2><p>轨迹优化里，代价和约束经常被混在一起。</p>
+<p>一个实用区分是：</p>
+<ul>
+<li><strong>约束</strong>：绝对不能违反的条件。</li>
+<li><strong>代价</strong>：允许权衡，但希望越小越好的指标。</li>
+</ul>
+<h3 id="2-1-常见代价"><a href="#2-1-常见代价" class="headerlink" title="2.1 常见代价"></a>2.1 常见代价</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">total_cost =</span><br><span class="line">  tracking_cost</span><br><span class="line">  + control_effort_cost</span><br><span class="line">  + smoothness_cost</span><br><span class="line">  + terminal_cost</span><br><span class="line">  + energy_cost</span><br></pre></td></tr></table></figure>
+
+<p>例如机械臂抓取时：</p>
+<ul>
+<li>末端需要接近目标</li>
+<li>关节动作不要过猛</li>
+<li>控制输入不要太大</li>
+<li>轨迹不要突然跳变</li>
+</ul>
+<h3 id="2-2-常见约束"><a href="#2-2-常见约束" class="headerlink" title="2.2 常见约束"></a>2.2 常见约束</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">joint_min &lt;= joint_position &lt;= joint_max</span><br><span class="line">velocity_min &lt;= joint_velocity &lt;= velocity_max</span><br><span class="line">torque_min &lt;= joint_torque &lt;= torque_max</span><br><span class="line">distance_to_obstacle &gt;= safety_margin</span><br></pre></td></tr></table></figure>
+
+<p>腿式机器人还会增加：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">normal_force &gt;= 0</span><br><span class="line">contact_force_within_friction_limit</span><br><span class="line">swing_foot_force = 0</span><br></pre></td></tr></table></figure>
+
+<p>调试时先问一个问题：</p>
+<p><strong>这是需要严格满足的硬条件，还是允许用权重折中的软目标。</strong></p>
+<hr>
+<h2 id="三、为什么需要离散化"><a href="#三、为什么需要离散化" class="headerlink" title="三、为什么需要离散化"></a>三、为什么需要离散化</h2><p>真实机器人运动是连续时间过程。</p>
+<p>但计算机求解优化问题时，需要把它切成有限个节点。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">continuous_motion</span><br><span class="line">  -&gt; discretize into N knot points</span><br><span class="line">  -&gt; optimize finite variables</span><br></pre></td></tr></table></figure>
+
+<p>节点太少时：</p>
+<ul>
+<li>轨迹过粗</li>
+<li>动力学误差大</li>
+<li>可能漏掉碰撞</li>
+</ul>
+<p>节点太多时：</p>
+<ul>
+<li>变量数量上升</li>
+<li>求解更慢</li>
+<li>初值更敏感</li>
+</ul>
+<p>所以轨迹优化的工程问题不只是”选哪个求解器”，还包括：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">time_horizon</span><br><span class="line">number_of_knot_points</span><br><span class="line">initial_guess</span><br><span class="line">constraint_tolerance</span><br><span class="line">solver_time</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、Direct-Transcription-是什么"><a href="#四、Direct-Transcription-是什么" class="headerlink" title="四、Direct Transcription 是什么"></a>四、Direct Transcription 是什么</h2><p>Direct Transcription 可以理解为：</p>
+<p><strong>把每个离散时刻的状态和控制都当成优化变量，再用约束把相邻时刻连接起来。</strong></p>
+<p>决策变量类似：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">x_0, x_1, ... x_N</span><br><span class="line">u_0, u_1, ... u_N-1</span><br></pre></td></tr></table></figure>
+
+<p>动力学约束类似：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">x_k+1 = discrete_dynamics(x_k, u_k)</span><br></pre></td></tr></table></figure>
+
+<p>优点：</p>
+<ul>
+<li>结构直观</li>
+<li>约束容易加入</li>
+<li>状态和输入都可以直接检查</li>
+</ul>
+<p>缺点：</p>
+<ul>
+<li>变量较多</li>
+<li>离散误差需要关注</li>
+<li>初值不好时仍然可能难解</li>
+</ul>
+<p>适合先建立轨迹优化直觉。</p>
+<hr>
+<h2 id="五、Direct-Collocation-是什么"><a href="#五、Direct-Collocation-是什么" class="headerlink" title="五、Direct Collocation 是什么"></a>五、Direct Collocation 是什么</h2><p>Direct Collocation 也是直接法，但它会进一步约束相邻节点之间的轨迹段。</p>
+<p>直观理解：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">not only check knot points</span><br><span class="line">also check whether the curve between knots follows dynamics</span><br></pre></td></tr></table></figure>
+
+<p>它常用于：</p>
+<ul>
+<li>倒立摆 swing-up</li>
+<li>小车摆</li>
+<li>机械臂动态动作</li>
+<li>无人机轨迹</li>
+<li>腿式机器人局部动作</li>
+</ul>
+<p>相比只检查离散节点，它通常能用较少节点表达更平滑的轨迹。</p>
+<p>但它也不是自动成功：</p>
+<ul>
+<li>初值仍然重要</li>
+<li>复杂接触仍然困难</li>
+<li>非凸问题仍然可能落入局部解</li>
+</ul>
+<hr>
+<h2 id="六、Shooting-方法是什么"><a href="#六、Shooting-方法是什么" class="headerlink" title="六、Shooting 方法是什么"></a>六、Shooting 方法是什么</h2><p>Shooting 方法通常把控制输入作为主要优化变量。</p>
+<p>给定控制序列后，仿真器向前滚动：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">u_0, u_1, ... u_N-1</span><br><span class="line">  -&gt; simulate dynamics</span><br><span class="line">  -&gt; x_1, x_2, ... x_N</span><br><span class="line">  -&gt; compute cost</span><br></pre></td></tr></table></figure>
+
+<p>优点：</p>
+<ul>
+<li>变量更少</li>
+<li>动力学天然由仿真满足</li>
+<li>容易和可微仿真结合</li>
+</ul>
+<p>缺点：</p>
+<ul>
+<li>长时域容易对初值敏感</li>
+<li>梯度可能消失或爆炸</li>
+<li>不稳定系统更难优化</li>
+</ul>
+<p>Multiple Shooting 会在中间增加状态节点，再用连续性约束连接不同片段。</p>
+<p>它是在”变量规模”和”数值稳定性”之间做折中。</p>
+<hr>
+<h2 id="七、轨迹优化和-MPC-有什么关系"><a href="#七、轨迹优化和-MPC-有什么关系" class="headerlink" title="七、轨迹优化和 MPC 有什么关系"></a>七、轨迹优化和 MPC 有什么关系</h2><p>轨迹优化和 MPC 经常使用相似的数学工具，但时间尺度不同。</p>
+<p>离线轨迹优化更关注：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">given task</span><br><span class="line">  -&gt; solve a good full trajectory</span><br><span class="line">  -&gt; inspect and execute later</span><br></pre></td></tr></table></figure>
+
+<p>MPC 更关注：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">current state</span><br><span class="line">  -&gt; solve a short horizon quickly</span><br><span class="line">  -&gt; execute first action</span><br><span class="line">  -&gt; solve again</span><br></pre></td></tr></table></figure>
+
+<p>可以这样理解：</p>
+<ul>
+<li>轨迹优化适合生成参考动作、复杂动作模板和离线可行解。</li>
+<li>MPC 适合把短时域优化放进在线闭环。</li>
+<li>WBC 负责把上层轨迹变成当前时刻可执行的全身命令。</li>
+</ul>
+<p>三者不是竞争关系。</p>
+<p>常见链路是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">offline trajectory optimization</span><br><span class="line">  -&gt; reference trajectory</span><br><span class="line">  -&gt; online MPC</span><br><span class="line">  -&gt; WBC or joint controller</span><br><span class="line">  -&gt; robot</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="八、Drake-为什么适合学轨迹优化"><a href="#八、Drake-为什么适合学轨迹优化" class="headerlink" title="八、Drake 为什么适合学轨迹优化"></a>八、Drake 为什么适合学轨迹优化</h2><p><a target="_blank" rel="noopener" href="https://github.com/RobotLocomotion/drake">Drake</a> 是 RobotLocomotion 维护的开源机器人建模、规划与控制工具箱。</p>
+<p>官方文档里提供了多个轨迹优化入口：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://drake.mit.edu/pydrake/pydrake.planning.html#pydrake.planning.DirectCollocation">DirectCollocation</a></li>
+<li><a target="_blank" rel="noopener" href="https://drake.mit.edu/pydrake/pydrake.planning.html#pydrake.planning.DirectTranscription">DirectTranscription</a></li>
+<li><a target="_blank" rel="noopener" href="https://drake.mit.edu/pydrake/pydrake.planning.html#pydrake.planning.KinematicTrajectoryOptimization">KinematicTrajectoryOptimization</a></li>
+<li><a target="_blank" rel="noopener" href="https://drake.mit.edu/pydrake/pydrake.planning.html#pydrake.planning.GcsTrajectoryOptimization">GcsTrajectoryOptimization</a></li>
+</ul>
+<h3 id="8-1-最适合入门的实验"><a href="#8-1-最适合入门的实验" class="headerlink" title="8.1 最适合入门的实验"></a>8.1 最适合入门的实验</h3><p>先做 cart-pole swing-up：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">initial_state: pole hanging down</span><br><span class="line">goal_state: pole upright</span><br><span class="line">control: cart force</span><br><span class="line">method: direct collocation</span><br></pre></td></tr></table></figure>
+
+<p>这个实验足够小，但能观察：</p>
+<ul>
+<li>初值</li>
+<li>节点数量</li>
+<li>输入限制</li>
+<li>终端约束</li>
+<li>求解时间</li>
+<li>轨迹可视化</li>
+</ul>
+<h3 id="8-2-再做机械臂"><a href="#8-2-再做机械臂" class="headerlink" title="8.2 再做机械臂"></a>8.2 再做机械臂</h3><p>第二个实验可以做机械臂避障：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">start_joint_position</span><br><span class="line">  -&gt; collision-free trajectory</span><br><span class="line">  -&gt; goal_joint_position</span><br></pre></td></tr></table></figure>
+
+<p>这时要开始检查：</p>
+<ul>
+<li>关节限位</li>
+<li>速度限制</li>
+<li>碰撞距离</li>
+<li>轨迹时间</li>
+<li>执行时的跟踪误差</li>
+</ul>
+<hr>
+<h2 id="九、什么是可微仿真"><a href="#九、什么是可微仿真" class="headerlink" title="九、什么是可微仿真"></a>九、什么是可微仿真</h2><p><img src="/images/robotics-trajopt/differentiable-simulation-loop.png" alt="可微仿真的梯度闭环"></p>
+<p>普通仿真器回答：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">given parameters and controls</span><br><span class="line">  -&gt; what trajectory happens</span><br></pre></td></tr></table></figure>
+
+<p>可微仿真器还希望回答：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">if loss is too large</span><br><span class="line">  -&gt; how should parameters or controls change</span><br></pre></td></tr></table></figure>
+
+<p>它把梯度沿仿真过程反向传递：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">parameters</span><br><span class="line">  -&gt; simulator rollout</span><br><span class="line">  -&gt; trajectory</span><br><span class="line">  -&gt; loss</span><br><span class="line">  -&gt; gradient</span><br><span class="line">  -&gt; update parameters</span><br></pre></td></tr></table></figure>
+
+<p>参数可能包括：</p>
+<ul>
+<li>质量</li>
+<li>摩擦系数</li>
+<li>控制增益</li>
+<li>初始状态</li>
+<li>控制序列</li>
+<li>策略参数</li>
+</ul>
+<hr>
+<h2 id="十、可微仿真适合解决什么"><a href="#十、可微仿真适合解决什么" class="headerlink" title="十、可微仿真适合解决什么"></a>十、可微仿真适合解决什么</h2><h3 id="10-1-系统辨识"><a href="#10-1-系统辨识" class="headerlink" title="10.1 系统辨识"></a>10.1 系统辨识</h3><p>如果真机日志和仿真结果不一致，可以尝试优化模型参数：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">loss =</span><br><span class="line">  difference(simulated_trajectory, measured_trajectory)</span><br></pre></td></tr></table></figure>
+
+<p>再更新：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">mass</span><br><span class="line">friction</span><br><span class="line">damping</span><br><span class="line">motor_gain</span><br></pre></td></tr></table></figure>
+
+<h3 id="10-2-控制序列优化"><a href="#10-2-控制序列优化" class="headerlink" title="10.2 控制序列优化"></a>10.2 控制序列优化</h3><p>给定任务损失，直接优化控制输入：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">controls</span><br><span class="line">  -&gt; rollout</span><br><span class="line">  -&gt; task_loss</span><br><span class="line">  -&gt; gradient</span><br><span class="line">  -&gt; better_controls</span><br></pre></td></tr></table></figure>
+
+<h3 id="10-3-策略优化"><a href="#10-3-策略优化" class="headerlink" title="10.3 策略优化"></a>10.3 策略优化</h3><p>仿真器也可以参与训练策略，让任务损失对策略参数反向传播。</p>
+<p>但这并不意味着梯度方法一定替代强化学习。</p>
+<p>接触、多模态行为、长时域任务和探索仍然可能更适合 RL、黑盒优化或混合方案。</p>
+<hr>
+<h2 id="十一、Genesis-的定位和边界"><a href="#十一、Genesis-的定位和边界" class="headerlink" title="十一、Genesis 的定位和边界"></a>十一、Genesis 的定位和边界</h2><p><a target="_blank" rel="noopener" href="https://github.com/Genesis-Embodied-AI/Genesis">Genesis</a> 是面向通用机器人和具身智能的开源物理平台。</p>
+<p>官方文档提供了：</p>
+<ul>
+<li>刚体、软体与多物理场仿真</li>
+<li>GPU 并行环境</li>
+<li>可微仿真接口</li>
+<li>面向 RL 的向量化仿真</li>
+<li>机器人资产和可视化</li>
+</ul>
+<p>可微仿真官方文档：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://genesis-world.readthedocs.io/en/latest/user_guide/advanced_topics/differentiable_simulation.html">Genesis Differentiable Simulation</a></li>
+</ul>
+<h3 id="11-1-一个典型梯度流程"><a href="#11-1-一个典型梯度流程" class="headerlink" title="11.1 一个典型梯度流程"></a>11.1 一个典型梯度流程</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">create scene with requires_grad enabled</span><br><span class="line">run forward simulation</span><br><span class="line">compute loss</span><br><span class="line">run backward pass</span><br><span class="line">read gradients</span><br><span class="line">update parameters or controls</span><br></pre></td></tr></table></figure>
+
+<h3 id="11-2-官方文档明确提示的限制"><a href="#11-2-官方文档明确提示的限制" class="headerlink" title="11.2 官方文档明确提示的限制"></a>11.2 官方文档明确提示的限制</h3><p>使用前要注意：</p>
+<ul>
+<li>长时域梯度可能不稳定</li>
+<li>反向传播需要保存状态，内存压力更大</li>
+<li>接触会带来不连续性</li>
+<li>不是所有碰撞与求解器路径都支持梯度</li>
+<li>需要检查具体版本文档和已知限制</li>
+</ul>
+<p>所以 Genesis 很适合做实验和快速验证，但不要只看到”可微”两个字就直接承诺真机效果。</p>
+<hr>
+<h2 id="十二、MJX-和-Brax-怎么看"><a href="#十二、MJX-和-Brax-怎么看" class="headerlink" title="十二、MJX 和 Brax 怎么看"></a>十二、MJX 和 Brax 怎么看</h2><p><a target="_blank" rel="noopener" href="https://mujoco.readthedocs.io/en/stable/mjx.html">MJX</a> 是 MuJoCo 官方面向 JAX 的设备 API，适合在加速硬件上批量运行 MuJoCo 模型。</p>
+<p>它适合：</p>
+<ul>
+<li>GPU 或 TPU 批量仿真</li>
+<li>JAX 生态训练</li>
+<li>机器人学习实验</li>
+<li>和 MuJoCo 模型资产复用</li>
+</ul>
+<p><a target="_blank" rel="noopener" href="https://github.com/google/brax">Brax</a> 仍然是重要的 JAX 机器人学习项目，但官方仓库当前已经明确建议：新物理仿真工作优先考虑 MJX 或 MuJoCo Warp，Brax 更适合作为训练算法库使用。</p>
+<p>这个变化值得记住，因为工具链会演进。</p>
+<p>选择时不要只看文章热度，要看官方维护方向。</p>
+<hr>
+<h2 id="十三、接触为什么让梯度变难"><a href="#十三、接触为什么让梯度变难" class="headerlink" title="十三、接触为什么让梯度变难"></a>十三、接触为什么让梯度变难</h2><p>机器人接触不是永远平滑的。</p>
+<p>例如脚落地时：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">before_contact: no ground force</span><br><span class="line">after_contact: ground force appears</span><br></pre></td></tr></table></figure>
+
+<p>这种切换会导致：</p>
+<ul>
+<li>梯度突变</li>
+<li>梯度不稳定</li>
+<li>优化器走向奇怪局部解</li>
+<li>仿真参数稍变，接触序列就变化</li>
+</ul>
+<p>工程上常见处理思路：</p>
+<ul>
+<li>先做无接触或接触模式固定的问题</li>
+<li>缩短优化时域</li>
+<li>使用更好的初值</li>
+<li>使用平滑接触近似</li>
+<li>对关键参数做范围限制</li>
+<li>用有限差分交叉验证梯度</li>
+<li>结合黑盒搜索或 RL</li>
+</ul>
+<p>可微仿真不是魔法。接触越复杂，越需要做梯度验证。</p>
+<hr>
+<h2 id="十四、调试方法"><a href="#十四、调试方法" class="headerlink" title="十四、调试方法"></a>十四、调试方法</h2><p>轨迹优化失败时，不要只盯着 <code>solver failed</code>。</p>
+<h3 id="14-1-先检查问题定义"><a href="#14-1-先检查问题定义" class="headerlink" title="14.1 先检查问题定义"></a>14.1 先检查问题定义</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">is start state valid</span><br><span class="line">is goal reachable</span><br><span class="line">are limits too strict</span><br><span class="line">is collision margin reasonable</span><br><span class="line">is the time horizon long enough</span><br></pre></td></tr></table></figure>
+
+<h3 id="14-2-再检查初值"><a href="#14-2-再检查初值" class="headerlink" title="14.2 再检查初值"></a>14.2 再检查初值</h3><p>非凸问题对初值很敏感。</p>
+<p>可以尝试：</p>
+<ul>
+<li>直线插值</li>
+<li>手工关键帧</li>
+<li>更简单问题的结果</li>
+<li>先去掉部分约束</li>
+<li>逐步增加障碍与接触</li>
+</ul>
+<h3 id="14-3-记录求解指标"><a href="#14-3-记录求解指标" class="headerlink" title="14.3 记录求解指标"></a>14.3 记录求解指标</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">solver_status</span><br><span class="line">solve_time_ms</span><br><span class="line">iteration_count</span><br><span class="line">final_cost</span><br><span class="line">constraint_violation</span><br><span class="line">trajectory_duration</span><br></pre></td></tr></table></figure>
+
+<h3 id="14-4-可微仿真要检查梯度"><a href="#14-4-可微仿真要检查梯度" class="headerlink" title="14.4 可微仿真要检查梯度"></a>14.4 可微仿真要检查梯度</h3><p>至少做一次：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">autodiff_gradient</span><br><span class="line">  vs</span><br><span class="line">finite_difference_gradient</span><br></pre></td></tr></table></figure>
+
+<p>如果两者差异很大，先别继续优化。</p>
+<hr>
+<h2 id="十五、作品集项目怎么做"><a href="#十五、作品集项目怎么做" class="headerlink" title="十五、作品集项目怎么做"></a>十五、作品集项目怎么做</h2><p>一个适合个人开发者的项目可以叫：</p>
+<p><strong>Drake 轨迹优化 + Genesis 参数辨识实验</strong></p>
+<p>分三阶段完成。</p>
+<h3 id="15-1-阶段一：Drake-cart-pole"><a href="#15-1-阶段一：Drake-cart-pole" class="headerlink" title="15.1 阶段一：Drake cart-pole"></a>15.1 阶段一：Drake cart-pole</h3><p>交付物：</p>
+<ul>
+<li>direct collocation 配置</li>
+<li>swing-up 动画</li>
+<li>节点数量对求解时间的影响</li>
+<li>输入限制对轨迹的影响</li>
+</ul>
+<h3 id="15-2-阶段二：机械臂避障"><a href="#15-2-阶段二：机械臂避障" class="headerlink" title="15.2 阶段二：机械臂避障"></a>15.2 阶段二：机械臂避障</h3><p>交付物：</p>
+<ul>
+<li>URDF 或 Drake 模型</li>
+<li>起点与终点</li>
+<li>障碍物场景</li>
+<li>碰撞约束</li>
+<li>轨迹可视化</li>
+<li>跟踪误差曲线</li>
+</ul>
+<h3 id="15-3-阶段三：Genesis-参数辨识"><a href="#15-3-阶段三：Genesis-参数辨识" class="headerlink" title="15.3 阶段三：Genesis 参数辨识"></a>15.3 阶段三：Genesis 参数辨识</h3><p>构造一个简单机器人或刚体实验：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">known control input</span><br><span class="line">  -&gt; rollout</span><br><span class="line">  -&gt; measured target trajectory</span><br><span class="line">  -&gt; optimize friction or mass</span><br></pre></td></tr></table></figure>
+
+<p>交付物：</p>
+<ul>
+<li>参数初值与优化结果</li>
+<li>loss 曲线</li>
+<li>梯度验证</li>
+<li>长时域失效案例</li>
+<li>内存与耗时记录</li>
+</ul>
+<hr>
+<h2 id="十六、简历表达怎么写"><a href="#十六、简历表达怎么写" class="headerlink" title="十六、简历表达怎么写"></a>十六、简历表达怎么写</h2><p>不要只写：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">熟悉 Drake 和 Genesis</span><br></pre></td></tr></table></figure>
+
+<p>更好的写法是：</p>
+<ul>
+<li>基于 Drake DirectCollocation 实现 cart-pole swing-up 与机械臂避障轨迹优化，完成状态、输入、碰撞约束建模及求解时间分析。</li>
+<li>使用 Genesis 可微仿真接口构建参数辨识实验，通过轨迹损失反向传播优化摩擦系数或质量参数，并使用有限差分校验梯度。</li>
+<li>对比 Direct Transcription、Direct Collocation 与 Shooting 的变量规模、初值敏感性和适用场景，整理接触不连续与长时域梯度失效案例。</li>
+</ul>
+<p>面试时要能回答：</p>
+<ol>
+<li>路径规划和轨迹优化有什么区别。</li>
+<li>代价与约束如何划分。</li>
+<li>Direct Collocation 为什么需要离散节点。</li>
+<li>Shooting 为什么在长时域更难。</li>
+<li>接触为什么会破坏梯度稳定性。</li>
+<li>Genesis、MJX 和 Brax 当前分别适合什么。</li>
+</ol>
+<hr>
+<h2 id="十七、参考项目与资料"><a href="#十七、参考项目与资料" class="headerlink" title="十七、参考项目与资料"></a>十七、参考项目与资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/RobotLocomotion/drake">Drake GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://drake.mit.edu/pydrake/pydrake.planning.html">Drake Trajectory Optimization API</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/Genesis-Embodied-AI/Genesis">Genesis GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://genesis-world.readthedocs.io/en/latest/user_guide/advanced_topics/differentiable_simulation.html">Genesis Differentiable Simulation Docs</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/google-deepmind/mujoco">MuJoCo GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://mujoco.readthedocs.io/en/stable/mjx.html">MuJoCo MJX Docs</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/google/brax">Brax GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/loco-3d/crocoddyl">Crocoddyl</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/stack-of-tasks/pinocchio">Pinocchio</a></li>
+</ul>
+<p>这些项目更新很快。实际安装和实现前，应再次查看官方文档、版本说明和已知限制。</p>
+<hr>
+<h2 id="十八、核心结论"><a href="#十八、核心结论" class="headerlink" title="十八、核心结论"></a>十八、核心结论</h2><ol>
+<li>轨迹优化输出的是满足动力学与约束的状态和控制序列，不只是几何路径。</li>
+<li>代价允许权衡，约束负责守住不可违反的物理和硬件边界。</li>
+<li>Direct Transcription、Direct Collocation 和 Shooting 是不同的离散化与求解思路。</li>
+<li>Drake 适合建立轨迹优化的工程直觉，并逐步进入机械臂和动态系统。</li>
+<li>可微仿真可以用于参数辨识、控制优化和策略训练，但接触与长时域仍然困难。</li>
+<li>Genesis、MJX 和 Brax 的定位不同，选择工具时要跟随官方维护方向。</li>
+<li>一份可信作品集必须包含求解指标、约束检查、梯度验证和失败案例。</li>
+</ol>
+<p>做到这里，你已经能把”让机器人动起来”进一步变成：</p>
+<p><strong>让机器人沿着可解释、可验证、可优化的轨迹动起来。</strong></p>
+<hr>
+<h2 id="系列导航"><a href="#系列导航" class="headerlink" title="系列导航"></a>系列导航</h2><p>本篇在系列中的位置：</p>
+<p><code>总路线图 -&gt; 四足控制 -&gt; MPC 工程实现 -&gt; 轨迹优化与可微仿真 -&gt; 人形控制基础 -&gt; 人形全身控制</code></p>
+<ul>
+<li>上一篇：<a href="/2026/06/01/MPC%E5%9C%A8%E8%85%BF%E5%BC%8F%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%87%8C%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E6%A8%A1%E5%9E%8B%E9%A2%84%E6%B5%8B%E5%88%B0%E5%AE%9E%E6%97%B6%E6%8E%A7%E5%88%B6/" title="MPC 在腿式机器人里的工程实现：从模型预测到实时控制">MPC 在腿式机器人里的工程实现：从模型预测到实时控制</a></li>
+<li>下一篇：<a href="/2026/04/06/%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E6%8E%A7%E5%88%B6%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%B4%A8%E5%BF%83%E3%80%81ZMP%E4%B8%8E%E6%AD%A5%E6%80%81/" title="人形机器人控制基础：质心、ZMP 与步态">人形机器人控制基础：质心、ZMP 与步态</a></li>
+<li>回到总路线：<a href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</a></li>
+</ul>
+<link rel="stylesheet" href="/css/spoiler.css" type="text/css"><script src="/js/spoiler.js" type="text/javascript" async></script></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://LJS515.github.io/">YiQiu</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://ljs515.github.io/2026/06/01/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8EDrake%E5%88%B0Genesis/">https://ljs515.github.io/2026/06/01/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8EDrake%E5%88%B0Genesis/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://ljs515.github.io" target="_blank">YiQiuのblog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD/">具身智能</a><a class="post-meta__tags" href="/tags/%E6%9C%BA%E5%99%A8%E4%BA%BA/">机器人</a><a class="post-meta__tags" href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/">开源项目</a><a class="post-meta__tags" href="/tags/MuJoCo/">MuJoCo</a><a class="post-meta__tags" href="/tags/%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96/">轨迹优化</a><a class="post-meta__tags" href="/tags/%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F/">可微仿真</a><a class="post-meta__tags" href="/tags/Drake/">Drake</a><a class="post-meta__tags" href="/tags/Genesis/">Genesis</a><a class="post-meta__tags" href="/tags/MJX/">MJX</a><a class="post-meta__tags" href="/tags/%E6%9C%80%E4%BC%98%E6%8E%A7%E5%88%B6/">最优控制</a></div><div class="post-share"><div class="social-share" data-image="/images/post-covers/trajectory-optimization.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>感谢您的支持</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechat.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wechat.jpg" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpg" alt="alipay"/></a><div class="post-qr-code-desc">alipay</div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related  no-desc" href="/2026/07/01/%E7%81%B5%E5%B7%A7%E6%89%8B%E6%8E%A7%E5%88%B6%E4%B8%8E%E8%A7%A6%E8%A7%89%E6%84%9F%E7%9F%A5/" title="灵巧手控制与触觉感知：从多指协同到接触闭环"><img class="cover" src="/images/post-covers/dexterous-hand-tactile.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">灵巧手控制与触觉感知：从多指协同到接触闭环</div></div></div></a><a class="pagination-related  no-desc" href="/2026/06/01/MPC%E5%9C%A8%E8%85%BF%E5%BC%8F%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%87%8C%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E6%A8%A1%E5%9E%8B%E9%A2%84%E6%B5%8B%E5%88%B0%E5%AE%9E%E6%97%B6%E6%8E%A7%E5%88%B6/" title="MPC 在腿式机器人里的工程实现：从模型预测到实时控制"><img class="cover" src="/images/post-covers/legged-mpc.png" onerror="onerror=null;src='/img/06.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">MPC 在腿式机器人里的工程实现：从模型预测到实时控制</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related no-desc" href="/2026/05/23/%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BB%BF%E7%9C%9F%E5%AE%9E%E6%88%98%EF%BC%9A%E4%BB%8EURDF%E5%88%B0IsaacLab%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83/" title="机器人仿真实战：从 URDF 到 Isaac Lab 并行训练"><img class="cover" src="/images/post-covers/simulation.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-23</div><div class="info-item-2">机器人仿真实战：从 URDF 到 Isaac Lab 并行训练</div></div></div></a><a class="pagination-related no-desc" href="/2026/06/01/MPC%E5%9C%A8%E8%85%BF%E5%BC%8F%E6%9C%BA%E5%99%A8%E4%BA%BA%E9%87%8C%E7%9A%84%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%EF%BC%9A%E4%BB%8E%E6%A8%A1%E5%9E%8B%E9%A2%84%E6%B5%8B%E5%88%B0%E5%AE%9E%E6%97%B6%E6%8E%A7%E5%88%B6/" title="MPC 在腿式机器人里的工程实现：从模型预测到实时控制"><img class="cover" src="/images/post-covers/legged-mpc.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-06-01</div><div class="info-item-2">MPC 在腿式机器人里的工程实现：从模型预测到实时控制</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/25/VLA%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AF%BC%E8%AE%BA%EF%BC%9AOpenVLA%E3%80%81Octo%E4%B8%8Epi0%E6%80%8E%E4%B9%88%E7%9C%8B/" title="VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看"><img class="cover" src="/images/post-covers/vla.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">VLA 大模型导论：OpenVLA、Octo 与 pi0 怎么看</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/23/ROS2%E5%B7%A5%E7%A8%8B%E6%8C%87%E5%8D%97%EF%BC%9A%E8%8A%82%E7%82%B9%E3%80%81TF%E3%80%81%E6%8E%A7%E5%88%B6%E7%8E%AF%E4%B8%8Erosbag%E8%B0%83%E8%AF%95/" title="ROS 2 工程指南：节点、TF、控制环与 rosbag 调试"><img class="cover" src="/images/post-covers/ros2.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-23</div><div class="info-item-2">ROS 2 工程指南：节点、TF、控制环与 rosbag 调试</div></div></div></a><a class="pagination-related no-desc" href="/2026/05/22/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E4%B8%AD%E7%9A%84%E6%84%9F%E7%9F%A5%E4%B8%8E%E4%B8%89%E7%BB%B4%E7%90%86%E8%A7%A3%EF%BC%9A%E7%9B%B8%E6%9C%BA%E3%80%81SLAM%E4%B8%8E3D%E8%A1%A8%E7%A4%BA/" title="具身智能中的感知与三维理解：相机、SLAM 与 3D 表示"><img class="cover" src="/images/post-covers/perception-3d.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-22</div><div class="info-item-2">具身智能中的感知与三维理解：相机、SLAM 与 3D 表示</div></div></div></a><a class="pagination-related no-desc" href="/2026/04/07/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E6%95%B0%E5%AD%A6%E5%9F%BA%E7%A1%80%E5%88%B0%E4%BA%BA%E5%BD%A2%E5%85%A8%E8%BA%AB%E6%8E%A7%E5%88%B6/" title="机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制"><img class="cover" src="/images/post-covers/roadmap.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-07</div><div class="info-item-2">机器人与具身智能全栈开发路线图：从数学基础到机器人学习与全身控制</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/02.jpg" onerror="this.onerror=null;this.src='/img/05.jpg'" alt="avatar"/></div><div class="author-info-name">YiQiu</div><div class="author-info-description">专注于嵌入式技术研究 | ROS学习之路 | 深度学习&人工智能 | 算法研究</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">27</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">80</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" href="https://LJS515.github.io/"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/LJS515" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:3435583503@qq.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><style>
+.announcement-card {
+    --main-color: #ff00ff;
+    --secondary-color: #00ffff;
+    --highlight-color: #ff5500;
+    position: relative;
+    overflow: hidden;
+}
+.announcement-content {
+    font-size: 1rem; 
+    line-height: 1.2; 
+    color: #ffffff;
+    position: relative;
+}
+.keyword {
+    color: var(--secondary-color);
+    font-weight: 300;
+    font-size: 1.1rem; 
+}
+.highlight {
+    color: var(--main-color);
+    font-weight: 1000;
+    font-size: 1.2rem; 
+}
+.announcement-content ul {
+    list-style-type: none;
+    margin: 0.8rem 0; 
+    padding-left: 1.5rem;   
+}
+</style>
+<div class="announcement-card">
+    <div class="announcement-content">
+        <p><span class="highlight">欢迎来到「YiQiu」ROS&AI研习录</span>！🎉</p>
+        <p><strong>本平台专注于：</strong></p>
+        <ul>
+            <li><span class="keyword">> 嵌入式系统开发</span></li>
+            <li><span class="keyword">> ROS学习</span></li>
+            <li><span class="keyword">> 算法研究</span></li>
+            <li><span class="keyword">> 深度学习&人工智能</span></li>
+        </ul>
+        <p>🌟 <strong>加入我们，一起探索机器人的奥秘，提升AI实战能力，共同创造更美好的人工智能！</strong></p>
+    </div>
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8E-Drake-%E5%88%B0-Genesis"><span class="toc-number">1.</span> <span class="toc-text">机器人轨迹优化与可微仿真：从 Drake 到 Genesis</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E5%88%B0%E5%BA%95%E4%BC%98%E5%8C%96%E4%BB%80%E4%B9%88"><span class="toc-number">1.1.</span> <span class="toc-text">一、轨迹优化到底优化什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E4%BB%A3%E4%BB%B7%E5%87%BD%E6%95%B0%E5%92%8C%E7%BA%A6%E6%9D%9F%E6%80%8E%E4%B9%88%E5%88%86%E5%B7%A5"><span class="toc-number">1.2.</span> <span class="toc-text">二、代价函数和约束怎么分工</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E5%B8%B8%E8%A7%81%E4%BB%A3%E4%BB%B7"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 常见代价</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E5%B8%B8%E8%A7%81%E7%BA%A6%E6%9D%9F"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 常见约束</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E7%A6%BB%E6%95%A3%E5%8C%96"><span class="toc-number">1.3.</span> <span class="toc-text">三、为什么需要离散化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81Direct-Transcription-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">1.4.</span> <span class="toc-text">四、Direct Transcription 是什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81Direct-Collocation-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">1.5.</span> <span class="toc-text">五、Direct Collocation 是什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81Shooting-%E6%96%B9%E6%B3%95%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">1.6.</span> <span class="toc-text">六、Shooting 方法是什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E5%92%8C-MPC-%E6%9C%89%E4%BB%80%E4%B9%88%E5%85%B3%E7%B3%BB"><span class="toc-number">1.7.</span> <span class="toc-text">七、轨迹优化和 MPC 有什么关系</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81Drake-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%80%82%E5%90%88%E5%AD%A6%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96"><span class="toc-number">1.8.</span> <span class="toc-text">八、Drake 为什么适合学轨迹优化</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-%E6%9C%80%E9%80%82%E5%90%88%E5%85%A5%E9%97%A8%E7%9A%84%E5%AE%9E%E9%AA%8C"><span class="toc-number">1.8.1.</span> <span class="toc-text">8.1 最适合入门的实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-%E5%86%8D%E5%81%9A%E6%9C%BA%E6%A2%B0%E8%87%82"><span class="toc-number">1.8.2.</span> <span class="toc-text">8.2 再做机械臂</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F"><span class="toc-number">1.9.</span> <span class="toc-text">九、什么是可微仿真</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%E9%80%82%E5%90%88%E8%A7%A3%E5%86%B3%E4%BB%80%E4%B9%88"><span class="toc-number">1.10.</span> <span class="toc-text">十、可微仿真适合解决什么</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-%E7%B3%BB%E7%BB%9F%E8%BE%A8%E8%AF%86"><span class="toc-number">1.10.1.</span> <span class="toc-text">10.1 系统辨识</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-%E6%8E%A7%E5%88%B6%E5%BA%8F%E5%88%97%E4%BC%98%E5%8C%96"><span class="toc-number">1.10.2.</span> <span class="toc-text">10.2 控制序列优化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-3-%E7%AD%96%E7%95%A5%E4%BC%98%E5%8C%96"><span class="toc-number">1.10.3.</span> <span class="toc-text">10.3 策略优化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%80%E3%80%81Genesis-%E7%9A%84%E5%AE%9A%E4%BD%8D%E5%92%8C%E8%BE%B9%E7%95%8C"><span class="toc-number">1.11.</span> <span class="toc-text">十一、Genesis 的定位和边界</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-%E4%B8%80%E4%B8%AA%E5%85%B8%E5%9E%8B%E6%A2%AF%E5%BA%A6%E6%B5%81%E7%A8%8B"><span class="toc-number">1.11.1.</span> <span class="toc-text">11.1 一个典型梯度流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-%E5%AE%98%E6%96%B9%E6%96%87%E6%A1%A3%E6%98%8E%E7%A1%AE%E6%8F%90%E7%A4%BA%E7%9A%84%E9%99%90%E5%88%B6"><span class="toc-number">1.11.2.</span> <span class="toc-text">11.2 官方文档明确提示的限制</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81MJX-%E5%92%8C-Brax-%E6%80%8E%E4%B9%88%E7%9C%8B"><span class="toc-number">1.12.</span> <span class="toc-text">十二、MJX 和 Brax 怎么看</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%89%E3%80%81%E6%8E%A5%E8%A7%A6%E4%B8%BA%E4%BB%80%E4%B9%88%E8%AE%A9%E6%A2%AF%E5%BA%A6%E5%8F%98%E9%9A%BE"><span class="toc-number">1.13.</span> <span class="toc-text">十三、接触为什么让梯度变难</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E5%9B%9B%E3%80%81%E8%B0%83%E8%AF%95%E6%96%B9%E6%B3%95"><span class="toc-number">1.14.</span> <span class="toc-text">十四、调试方法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#14-1-%E5%85%88%E6%A3%80%E6%9F%A5%E9%97%AE%E9%A2%98%E5%AE%9A%E4%B9%89"><span class="toc-number">1.14.1.</span> <span class="toc-text">14.1 先检查问题定义</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#14-2-%E5%86%8D%E6%A3%80%E6%9F%A5%E5%88%9D%E5%80%BC"><span class="toc-number">1.14.2.</span> <span class="toc-text">14.2 再检查初值</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#14-3-%E8%AE%B0%E5%BD%95%E6%B1%82%E8%A7%A3%E6%8C%87%E6%A0%87"><span class="toc-number">1.14.3.</span> <span class="toc-text">14.3 记录求解指标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#14-4-%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%E8%A6%81%E6%A3%80%E6%9F%A5%E6%A2%AF%E5%BA%A6"><span class="toc-number">1.14.4.</span> <span class="toc-text">14.4 可微仿真要检查梯度</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%BA%94%E3%80%81%E4%BD%9C%E5%93%81%E9%9B%86%E9%A1%B9%E7%9B%AE%E6%80%8E%E4%B9%88%E5%81%9A"><span class="toc-number">1.15.</span> <span class="toc-text">十五、作品集项目怎么做</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#15-1-%E9%98%B6%E6%AE%B5%E4%B8%80%EF%BC%9ADrake-cart-pole"><span class="toc-number">1.15.1.</span> <span class="toc-text">15.1 阶段一：Drake cart-pole</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#15-2-%E9%98%B6%E6%AE%B5%E4%BA%8C%EF%BC%9A%E6%9C%BA%E6%A2%B0%E8%87%82%E9%81%BF%E9%9A%9C"><span class="toc-number">1.15.2.</span> <span class="toc-text">15.2 阶段二：机械臂避障</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#15-3-%E9%98%B6%E6%AE%B5%E4%B8%89%EF%BC%9AGenesis-%E5%8F%82%E6%95%B0%E8%BE%A8%E8%AF%86"><span class="toc-number">1.15.3.</span> <span class="toc-text">15.3 阶段三：Genesis 参数辨识</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E5%85%AD%E3%80%81%E7%AE%80%E5%8E%86%E8%A1%A8%E8%BE%BE%E6%80%8E%E4%B9%88%E5%86%99"><span class="toc-number">1.16.</span> <span class="toc-text">十六、简历表达怎么写</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%83%E3%80%81%E5%8F%82%E8%80%83%E9%A1%B9%E7%9B%AE%E4%B8%8E%E8%B5%84%E6%96%99"><span class="toc-number">1.17.</span> <span class="toc-text">十七、参考项目与资料</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E5%85%AB%E3%80%81%E6%A0%B8%E5%BF%83%E7%BB%93%E8%AE%BA"><span class="toc-number">1.18.</span> <span class="toc-text">十八、核心结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%B3%BB%E5%88%97%E5%AF%BC%E8%88%AA"><span class="toc-number">1.19.</span> <span class="toc-text">系列导航</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/07/01/Mobile%20ALOHA%E4%B8%8EHumanPlus%EF%BC%9A%E7%A7%BB%E5%8A%A8%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%BA%E5%BD%A2%E7%A4%BA%E6%95%99%E6%95%B0%E6%8D%AE%E5%85%A8%E6%B5%81%E7%A8%8B/" title="Mobile ALOHA 与 HumanPlus：移动操作与人形示教数据全流程"><img src="/images/post-covers/mobile-aloha-humanplus.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="Mobile ALOHA 与 HumanPlus：移动操作与人形示教数据全流程"/></a><div class="content"><a class="title" href="/2026/07/01/Mobile%20ALOHA%E4%B8%8EHumanPlus%EF%BC%9A%E7%A7%BB%E5%8A%A8%E6%93%8D%E4%BD%9C%E4%B8%8E%E4%BA%BA%E5%BD%A2%E7%A4%BA%E6%95%99%E6%95%B0%E6%8D%AE%E5%85%A8%E6%B5%81%E7%A8%8B/" title="Mobile ALOHA 与 HumanPlus：移动操作与人形示教数据全流程">Mobile ALOHA 与 HumanPlus：移动操作与人形示教数据全流程</a><time datetime="2026-07-01T07:00:00.000Z" title="发表于 2026-07-01 15:00:00">2026-07-01</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/01/%E7%81%B5%E5%B7%A7%E6%89%8B%E6%8E%A7%E5%88%B6%E4%B8%8E%E8%A7%A6%E8%A7%89%E6%84%9F%E7%9F%A5/" title="灵巧手控制与触觉感知：从多指协同到接触闭环"><img src="/images/post-covers/dexterous-hand-tactile.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="灵巧手控制与触觉感知：从多指协同到接触闭环"/></a><div class="content"><a class="title" href="/2026/07/01/%E7%81%B5%E5%B7%A7%E6%89%8B%E6%8E%A7%E5%88%B6%E4%B8%8E%E8%A7%A6%E8%A7%89%E6%84%9F%E7%9F%A5/" title="灵巧手控制与触觉感知：从多指协同到接触闭环">灵巧手控制与触觉感知：从多指协同到接触闭环</a><time datetime="2026-07-01T02:00:00.000Z" title="发表于 2026-07-01 10:00:00">2026-07-01</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/01/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8EDrake%E5%88%B0Genesis/" title="机器人轨迹优化与可微仿真：从 Drake 到 Genesis"><img src="/images/post-covers/trajectory-optimization.png" onerror="this.onerror=null;this.src='/img/06.jpg'" alt="机器人轨迹优化与可微仿真：从 Drake 到 Genesis"/></a><div class="content"><a class="title" href="/2026/06/01/%E6%9C%BA%E5%99%A8%E4%BA%BA%E8%BD%A8%E8%BF%B9%E4%BC%98%E5%8C%96%E4%B8%8E%E5%8F%AF%E5%BE%AE%E4%BB%BF%E7%9C%9F%EF%BC%9A%E4%BB%8EDrake%E5%88%B0Genesis/" title="机器人轨迹优化与可微仿真：从 Drake 到 Genesis">机器人轨迹优化与可微仿真：从 Drake 到 Genesis</a><time datetime="2026-06-01T06:00:00.000Z" title="发表于 2026-06-01 14:00:00">2026-06-01</time></div></div></div></div></div></div></main><footer id="footer" style="background-color: rgba(45, 10, 61, 0.2);"><div class="footer-other"><div class="footer-copyright"></div><div class="footer_custom_text"><style>
+  .footer {
+    text-align: center;
+    position: relative;
+  }
+  .social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .social-links i {
+    color: #8400ff;
+  }
+  .social-link {
+    color: #8a2be2;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: rgba(138, 43, 226, 0.1);
+  }
+  .social-link:hover {
+    color: #ffffff;
+    background: #892be2;
+    transform: translateY(-3px) scale(1.08);
+    box-shadow: 0 5px 15px rgba(138, 43, 226, 0.4);
+    text-decoration: none !important;
+  }
+  .footer p {
+    margin: 0.5rem 0;
+    line-height: 1.4;
+  }
+  .copyright {
+    font-size: 1.1rem;
+    color: #c08bdf;
+    font-weight: 400;
+  }
+  .tagline {
+    font-size: 0.8rem;
+    color: #8a2be2;
+    font-style: italic;
+    font-weight: 500;
+  }
+  .footer-note {
+    font-size: 0.78rem;
+    color: rgba(219, 142, 255, 0.8);
+  }
+</style>
+<div class="footer">
+  <div class="social-links">
+    <a href="https://github.com/LJS515" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+    <a href="https://blog.csdn.net/2401_84593538" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="CSDN" title="CSDN">
+      <i class="fas fa-code"></i>
+    </a>
+    <a href="https://www.xiaohongshu.com/user/profile/5e8a0aae0000000001002ce4" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="小红书" title="小红书">
+      <i class="fas fa-book"></i>
+    </a>
+    <a href="https://space.bilibili.com/1158177941" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="bilibili" title="bilibili">
+      <i class="fab fa-bilibili"></i>
+    </a>
+  </div>
+  <p class="copyright">© 2025 YiQiuのblog</p>
+  <p class="tagline">&gt; Stay curious, stay hacking, stay anime! &lt;</p>
+  <p class="footer-note">静态站点不再展示伪造访问量。后续如需真实统计，建议接入 Umami、Google Analytics 或 Cloudflare Web Analytics。</p>
+</div>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.2"></script><script src="/js/main.js?v=5.5.2"></script><div class="js-pjax"></div><script defer src="/js/cursor.js"></script><script src="/js/sakura.js"></script><meting-js class="no-destroy" id="8932390" server="netease" type="playlist" fixed="true" autoplay="true" order="random" volume="0.3" list-folded="false" list-max-height="36vh"> </meting-js><link rel="stylesheet" href="https://npm.elemecdn.com/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'"><script src="https://npm.elemecdn.com/aplayer/dist/APlayer.min.js"></script><script src="https://npm.elemecdn.com/meting/dist/Meting.min.js"></script><script>(() => {
+  const destroyAplayer = () => {
+    if (window.aplayers) {
+      for (let i = 0; i < window.aplayers.length; i++) {
+        if (!window.aplayers[i].options.fixed) {
+          window.aplayers[i].destroy()
+        }
+      }
+    }
+  }
+
+  const runMetingJS = () => {
+    typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+  }
+
+  btf.addGlobalFn('pjaxSend', destroyAplayer, 'destroyAplayer')
+  btf.addGlobalFn('pjaxComplete', loadMeting, 'runMetingJS')
+})()</script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      const usePjax = true
+      true
+        ? (usePjax ? pjax.loadUrl('/404.html') : window.location.href = '/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})()</script><script async data-pjax src="/"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词..." type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.2"></script></div></div><!-- hexo injector body_end start --><script data-pjax>
+  function butterfly_categories_card_injector_config(){
+    // 检查容器是否存在
+    var parent_div_git = document.getElementById('recent-posts');
+    // 如果容器不存在，则动态创建
+    if (!parent_div_git) {
+      console.warn('butterfly_categories_card: 挂载容器不存在，正在动态创建...');
+      // 创建新容器（默认插入到页面主体顶部）
+      parent_div_git = document.createElement('div');
+      parent_div_git.id = 'recent-posts'; // 赋予配置的ID
+      document.querySelector('#page').prepend(parent_div_git); // 插入到 #content-inner 内
+    }
+    var item_html = '<style>li.categoryBar-list-item{width:32.3%;}.categoryBar-list{max-height: 950px;overflow:auto;}.categoryBar-list::-webkit-scrollbar{width:0!important}@media screen and (max-width: 650px){.categoryBar-list{max-height: 800px;}}</style><div class="recent-post-item" style="height:auto;width:100%;padding:0px;"><div id="categoryBar"><ul class="categoryBar-list"><li class="categoryBar-list-item" style="background:url(/img/11.png);"> <a class="categoryBar-list-link" onclick="pjax.loadUrl(&quot;/categories/具身智能教程/&quot;);" href="javascript:void(0);">具身智能教程</a><span class="categoryBar-list-count">25</span><span class="categoryBar-list-descr">1</span></li></ul></div></div>';
+    console.log('已挂载 butterfly_categories_card');
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+  }
+  // 路径匹配逻辑（使用 startsWith）
+  if (location.pathname.startsWith('/categories/') || '/categories/' === 'all') {
+    butterfly_categories_card_injector_config();
+  }
+  </script><script data-pjax>
+  function butterfly_swiper_injector_config(){
+    var parent_div_git = document.getElementById('recent-posts');
+    var item_html = '<div class="recent-post-item" style="height: auto;width: 100%"><div class="blog-slider swiper-container-fade swiper-container-horizontal" id="swiper_container"><div class="blog-slider__wrp swiper-wrapper" style="transition-duration: 0ms;"></div><div class="blog-slider__pagination swiper-pagination-clickable swiper-pagination-bullets"></div></div></div>';
+    console.log('已挂载butterfly_swiper')
+    parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+    }
+  var elist = 'undefined'.split(',');
+  var cpage = location.pathname;
+  var epage = '/';
+  var flag = 0;
+
+  for (var i=0;i<elist.length;i++){
+    if (cpage.includes(elist[i])){
+      flag++;
+    }
+  }
+
+  if ((epage ==='all')&&(flag == 0)){
+    butterfly_swiper_injector_config();
+  }
+  else if (epage === cpage){
+    butterfly_swiper_injector_config();
+  }
+  </script><script defer src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper.min.js"></script><script defer data-pjax src="https://npm.elemecdn.com/hexo-butterfly-swiper/lib/swiper_init.js"></script><!-- hexo injector body_end end --><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/tororo.model.json"},"display":{"position":"right","width":200,"height":400},"mobile":{"show":true},"react":{"opacity":0.7},"log":false});</script></body></html>
